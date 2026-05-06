@@ -176,7 +176,7 @@ public class RaycastedAntiESPCommand {
         @Executes("entity-id")
         void getFromEntityID(int entityID, Player player) {
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            EntityLocatable<?, ?, ?, ?> entityLocatable = playerData.entityView().getEntity(entityID);
+            EntityLocatable<?, ?> entityLocatable = playerData.entityView().getEntity(entityID);
             Entity bukkitEntity = SpigotConversionUtil.getEntityById(player.getWorld(), entityID);
             player.sendRichMessage("Entity with ID " + entityID + ":");
             player.sendRichMessage("According to Bukkit: " + bukkitEntity);
