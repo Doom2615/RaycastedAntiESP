@@ -862,13 +862,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             else {
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
-            common.writeIfPresent(viewer, buildPassengersPacket(entity));
-            WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, PlayerRegistry.getInstance().getPlayerData(viewer.getUUID()));
-            if (leashPackets == null) continue;
-            for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
-                if (leashPacket != null) {
-                    viewer.writePacketSilently(leashPacket);
-                }
+        }
+        common.writeIfPresent(viewer, buildPassengersPacket(entity));
+        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, PlayerRegistry.getInstance().getPlayerData(viewer.getUUID()));
+        if (leashPackets == null) return;
+        for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
+            if (leashPacket != null) {
+                viewer.writePacketSilently(leashPacket);
             }
         }
     }
