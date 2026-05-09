@@ -71,7 +71,7 @@ public abstract class PacketEntityViewController<P> {
 
         NettyEntityLocatable<?,?> entity = processEntitySpawn(playerData, packet, world, currentTick);
 
-        if ((!isPlayer && entityConfig.enabled()) || playerConfig.enabled()) {
+        if ((!isPlayer && entityConfig.enabled()) || isPlayer && playerConfig.enabled()) {
             double distanceSquared = playerData.ownLocation().distanceSquared(entity);
             if (distanceSquared > hideOnSpawnEntityDistanceSquared) {
                 entity.setVisible(false);
