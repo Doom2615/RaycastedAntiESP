@@ -333,9 +333,13 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     @Override
     public void clear() {
         world = null;
-        passengerIDs = null;
         packetReplayData.clear();
         packetReplayData = null;
+
+        vehicleID = -1;
+        passengerIDs = null;
+        leashedIDs = null;
+        leasherID = NO_LEASHER;
     }
 
     @Override
