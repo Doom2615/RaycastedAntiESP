@@ -662,13 +662,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return new WrapperPlayServerSetPassengers(entity.entityID(), passengerIDs);
     }
 
-    private WrapperPlayServerEntityVelocity buildVelocityPacket(PacketEventsEntity entity) {
-        return new WrapperPlayServerEntityVelocity(
-                entity.entityID(),
-                new Vector3d(entity.velocityX(), entity.velocityY(), entity.velocityZ())
-        );
-    }
-
     private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData) {
         int[] leashedIDs = entity.leashedEntityIDsOrNull();
         int leashingID = entity.leashingEntity();
@@ -731,13 +724,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         );
     }
 
-    private WrapperPlayServerSetPassengers copySetPassengersPacket(WrapperPlayServerSetPassengers packet) {
-        return new WrapperPlayServerSetPassengers(
-                packet.getEntityId(),
-                packet.getPassengers().clone()
-        );
-    }
-
     private WrapperPlayServerRemoveEntityEffect copyRemoveEntityEffectPacket(WrapperPlayServerRemoveEntityEffect packet) {
         return new WrapperPlayServerRemoveEntityEffect(
                 packet.getEntityId(),
@@ -792,8 +778,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     private void sendEntityShow(User viewer, PacketEventsEntity entity, PacketEventsEntityReplayData replayData) {
         viewer.writePacketSilently(buildSpawnPacket(entity));
         sendEntityAbsoluteCorrection(viewer, entity);
+
         for (PacketWrapper<?> cachedPacket : replayData.getPackets()) {
-            //viewer.writePacketSilently(cachedPacket);
 
             if (cachedPacket.getClass() == WrapperPlayServerEntityMetadata.class) {
                 WrapperPlayServerEntityMetadata metadataPacket = copyEntityMetadataPacket((WrapperPlayServerEntityMetadata) cachedPacket);
@@ -801,10 +787,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityEquipment.class) {
                 WrapperPlayServerEntityEquipment equipmentPacket = copyEntityEquipmentPacket((WrapperPlayServerEntityEquipment) cachedPacket);
                 viewer.writePacketSilently(equipmentPacket);
-            } else if (cachedPacket.getClass() == WrapperPlayServerSetPassengers.class) {
-                Logger.warning("Passenger packet was incorrectly cached", 1, PacketEventsEntityViewController.class);
-                //WrapperPlayServerSetPassengers passengersPacket = copySetPassengersPacket((WrapperPlayServerSetPassengers) cachedPacket);
-                //viewer.writePacketSilently(passengersPacket);
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityVelocity.class) {
                 WrapperPlayServerEntityVelocity velocityPacket = copyEntityVelocityPacket((WrapperPlayServerEntityVelocity) cachedPacket);
                 viewer.writePacketSilently(velocityPacket);
