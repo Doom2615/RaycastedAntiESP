@@ -243,6 +243,14 @@ public abstract class PacketEntityViewController<P> {
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
         NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
         entity.setPassengerIDs(passengers);
+        for (int passengerID : passengers) {
+            NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, playerData);
+            if (passenger == null) {
+                Logger.error("Found null passenger when handling entity passengers packet, passengerID=" + passengerID + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
+                continue;
+            }
+            passenger.setVehicleID(entityID);
+        }
         checkVehicle(entity, playerData);
         if (cancelIfEnabledAndHidden(entityID, playerData)) return true;
         boolean passengersNotVisible = false;
