@@ -424,8 +424,6 @@ public abstract class PacketEntityViewController<P> {
     /**Silently sends the provided array of entities as passengers for the required vehicle.*/
     protected abstract void sendEntityPassengerPacket(int vehicle, ArrayList<Integer> passengers, PlayerData playerData);
 
-    protected abstract void processDestroyEntitiesPacket(P packet, PlayerData playerData, int currentTick);
-
     protected abstract void insertEntityToPlayerView(NettyEntityLocatable<?,?> entity, PlayerData playerData);
 
     protected abstract void insertEntityToEntityView(NettyEntityLocatable<?,?> entity, PlayerData playerData);
