@@ -292,8 +292,15 @@ public abstract class PacketEntityViewController<P> {
         }
     }
 
-    protected void handleDestroyEntities(P packet, PlayerData playerData, int currentTick) {
-        processDestroyEntitiesPacket(packet, playerData, currentTick);
+    protected void handleDestroyEntities(int[] entityIDs, PlayerData playerData, int currentTick) {
+        for (int entityID : entityIDs) {
+            EntityView<?> entityView = viewFromEntityID(entityID, playerData);
+            if (entityView == null) {
+                Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEntityViewController.class);
+                continue;
+            }
+            entityView.removeEntity(entityID, currentTick);
+        }
     }
 
     /**

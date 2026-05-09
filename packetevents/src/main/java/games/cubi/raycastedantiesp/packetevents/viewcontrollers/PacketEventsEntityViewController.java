@@ -223,7 +223,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.DESTROY_ENTITIES -> {
-                handleDestroyEntities(new WrapperPlayServerDestroyEntities(event), playerData, currentTick);
+                handleDestroyEntities(new WrapperPlayServerDestroyEntities(event).getEntityIds(), playerData, currentTick);
             }
             case PacketType.Play.Server.UPDATE_ATTRIBUTES -> {
                 WrapperPlayServerUpdateAttributes wrapper = new WrapperPlayServerUpdateAttributes(event);
@@ -600,48 +600,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.stream().mapToInt(Integer::intValue).toArray());
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
         PacketEvents.getAPI().getProtocolManager().getUser(channel).writePacketSilently(packet);
-    }
-
-    @Override
-    protected void processDestroyEntitiesPacket(PacketWrapper<?> packet, PlayerData playerData, int currentTick) {
-        WrapperPlayServerDestroyEntities packetWrapper = (WrapperPlayServerDestroyEntities) packet;
-        for (int entityID : packetWrapper.getEntityIds()) {
-            EntityView<?> entityView = viewFromEntityID(entityID, playerData);
-            if (entityView == null) {
-                Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEventsEntityViewController.class);
-                continue;
-            }
-            entityView.removeEntity(entityID, currentTick);
-        }
-
-        /* I think this old logic is wrong
-        List<Integer> remaining = new ArrayList<>();
-        WrapperPlayServerDestroyEntities packetWrapper = (WrapperPlayServerDestroyEntities) packet;
-        for (int entityID : packetWrapper.getEntityIds()) {
-
-            EntityLookup lookup = lookupEntity(playerData, entityID);
-            if (lookup == null) {
-                remaining.add(entityID);
-                continue;
-            }
-
-            boolean visible = lookup.view().isVisible(lookup.entity().entityUUID(), currentTick);
-            boolean clientVisible = lookup.entity().clientVisible();
-            lookup.view().removeEntity(entityID, currentTick);
-
-            if (visible && clientVisible) {
-                remaining.add(entityID);
-            }
-        }
-
-        if (remaining.size() == packet.getEntityIds().length) {
-            return;
-        }
-
-        event.setCancelled(true);
-        if (!remaining.isEmpty()) {
-            viewer.sendPacketSilently(new WrapperPlayServerDestroyEntities(remaining.stream().mapToInt(Integer::intValue).toArray()));
-        }*/
     }
 
     private PacketEventsEntity trackEntitySpawn(PlayerData playerData, UUID entityUUID, int entityID, UUID world, double x, double y, double z, EntityType entityType) {
