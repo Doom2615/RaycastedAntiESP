@@ -11,7 +11,7 @@ public @interface Packet {
     enum Packets {
         @Until("1.9")
         SPAWN_LIVING_ENTITY("N/A", "WrapperPlayServerSpawnEntityLiving"),
-        SPAWN_ENTITY("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Spawn_Entity", "WrapperPlayServerSpawnEntity"),
+        SPAWN_ENTITY("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Spawn_Entity", "WrapperPlayServerSpawnEntity"), //Note does not fire for self player
         ENTITY_ANIMATION("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Entity_Animation", "WrapperPlayServerEntityAnimation"),
         ENTITY_EVENT("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Entity_Event", "WrapperPlayServerEntityStatus"),
         HURT_ANIMATION("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Hurt_Animation", "WrapperPlayServerHurtAnimation"),
