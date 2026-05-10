@@ -44,7 +44,7 @@ public class SimpleEngine implements Engine {
         if (threads < 1) threads = 1;
 
         if (!tickThreadsRunning.compareAndSet(0, threads)) {
-            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues.", 2, SimpleEngine.class);
+            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
             return;
         }
 
