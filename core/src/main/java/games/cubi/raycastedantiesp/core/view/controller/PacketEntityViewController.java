@@ -201,6 +201,7 @@ public abstract class PacketEntityViewController<P> {
         return handleEntityPassengers(entityID, passengers, playerData, currentTick, DELAYED_PASSENGER_PACKET_RETRY_COUNT);
     }
 
+    //This (and leash handling) leaks some info to the client, as it will receive the passenger packet even if the passengers are auto-hidden once parsed, but as the packet doesn't include any location or type info, this shouldn't be too incriminating.
     private boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick, int retriesRemaining) {
         NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
         if (entity == null) {
