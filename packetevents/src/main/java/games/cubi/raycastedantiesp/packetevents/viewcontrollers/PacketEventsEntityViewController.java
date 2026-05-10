@@ -521,7 +521,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     @Override
     protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData) {
-        cachePacket(packet, entityID, playerData, DELAYED_PACKET_RETRY_COUNT);
+        cachePacket(packet, entityID, playerData, DELAYED_CACHE_PACKET_RETRY_COUNT);
     }
 
     private void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int retriesRemaining) {

@@ -19,7 +19,11 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
  * @param <P> The platform's packet wrapper (PacketWrapper<?>)
  */
 public abstract class PacketEntityViewController<P> {
-    public static final int DELAYED_PACKET_RETRY_COUNT = 5;
+    private static final int SAFETY_MARGIN_FACTOR = 2; // Multiplier for the max delayed packet retry count. While the below values were set based on testing which showed no errors, these are magic numbers based on nothing concrete, and mojang could break it at any time.
+    public static final int DELAYED_CACHE_PACKET_RETRY_COUNT = 3 * SAFETY_MARGIN_FACTOR; // A delay of 3 seems to be exactly perfect from my testing, with no packets needing more or less than two retries.
+    public static final int DELAYED_PASSENGER_PACKET_RETRY_COUNT = 72 * SAFETY_MARGIN_FACTOR; //Such a high delay only seems relevant when the player spawns in while riding an entity, probably because all player packets are sent before the vehicle packets.
+    public static final int DELAYED_LEASH_PACKET_RETRY_COUNT = 32 * SAFETY_MARGIN_FACTOR;
+
     protected EntityConfig entityConfig = null;
     protected PlayerConfig playerConfig = null;
     protected double hideOnSpawnEntityDistanceSquared = 0;
@@ -194,7 +198,7 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
-        return handleEntityPassengers(entityID, passengers, playerData, currentTick, DELAYED_PACKET_RETRY_COUNT);
+        return handleEntityPassengers(entityID, passengers, playerData, currentTick, DELAYED_PASSENGER_PACKET_RETRY_COUNT);
     }
 
     private boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick, int retriesRemaining) {
@@ -289,7 +293,7 @@ public abstract class PacketEntityViewController<P> {
      */
     @Packet(Packet.Packets.LEASH_ENTITY)
     protected boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData) {
-        return handleLeashEntity(leashedEntity, leashingEntity, playerData, DELAYED_PACKET_RETRY_COUNT);
+        return handleLeashEntity(leashedEntity, leashingEntity, playerData, DELAYED_LEASH_PACKET_RETRY_COUNT);
     }
 
     private boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int retriesRemaining) {
@@ -320,7 +324,7 @@ public abstract class PacketEntityViewController<P> {
                     delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
                     return false;
                 }
-                Logger.error("Found null leashing entity when handling leash entity packet, leashingEntityID=" + leashingEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
+                Logger.error("Found null leashing entity when handling leash entity packet, leashingEntityID=" + leashingEntity + ", leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 return false;
             }
             leashed.setLeashingEntity(leashingEntity);
