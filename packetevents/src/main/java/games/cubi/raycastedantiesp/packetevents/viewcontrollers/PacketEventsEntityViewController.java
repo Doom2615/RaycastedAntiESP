@@ -45,8 +45,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     protected abstract UUID resolveWorldUUID(User user);
 
-    protected abstract int getHiddenBlockId(int blockY);
-
     public void removeViewer(UUID viewerUUID) {
     }
 

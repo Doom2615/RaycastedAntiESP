@@ -23,8 +23,6 @@ import java.util.function.IntSupplier;
 
 public class PaperPacketEventsEntityViewController extends PacketEventsEntityViewController implements Listener {
     private final Map<NamespacedKey, UUID> worldIdByWorldKey = new ConcurrentHashMap<>();
-    private final int stoneBlockId = SpigotConversionUtil.fromBukkitBlockData(Material.STONE.createBlockData()).getGlobalId();
-    private final int deepslateBlockId = SpigotConversionUtil.fromBukkitBlockData(Material.DEEPSLATE.createBlockData()).getGlobalId();
 
     public PaperPacketEventsEntityViewController(IntSupplier currentTickSupplier) {
         super(currentTickSupplier);
@@ -40,11 +38,6 @@ public class PaperPacketEventsEntityViewController extends PacketEventsEntityVie
         }
         NamespacedKey worldKey = NamespacedKey.fromString(user.getDimensionType().getName().toString());
         return worldKey == null ? null : worldIdByWorldKey.get(worldKey);
-    }
-
-    @Override
-    protected int getHiddenBlockId(int blockY) {
-        return blockY > 0 ? stoneBlockId : deepslateBlockId;
     }
 
     @EventHandler
