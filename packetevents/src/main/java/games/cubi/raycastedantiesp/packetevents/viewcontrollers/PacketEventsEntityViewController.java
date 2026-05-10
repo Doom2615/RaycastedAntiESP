@@ -81,7 +81,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
         int currentTick = currentTickSupplier.getAsInt();
 
-        //handlePlayerInfoPackets(event, event.getUser(), playerData, world, currentTick);
         playerData.runAllNettyTasks();
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
 
@@ -95,40 +94,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         
         event.getUser().flushPackets();
     }
-/*
-    private void handlePlayerInfoPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {
-        if (event.getPacketType() == PacketType.Play.Server.PLAYER_INFO_UPDATE) {
-            WrapperPlayServerPlayerInfoUpdate packet = new WrapperPlayServerPlayerInfoUpdate(event);
-            for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo entry : packet.getEntries()) {
-                UUID targetUUID = entry.getProfileId();
-                if (targetUUID == null) {
-                    continue;
-                }
-                PacketEventsEntity entity = cast(playerData.playerView().getEntity(targetUUID));
-                if (entity == null) {
-                    continue;
-                }
-                ensurePlayerReplayData(entity).addPlayerInfoUpdate(new WrapperPlayServerPlayerInfoUpdate(packet.getActions(), List.of(entry)));
-            }
-        } else if (event.getPacketType() == PacketType.Play.Server.PLAYER_INFO_REMOVE) {
-            WrapperPlayServerPlayerInfoRemove packet = new WrapperPlayServerPlayerInfoRemove(event);
-            List<UUID> remaining = new ArrayList<>();
-            for (UUID targetUUID : packet.getProfileIds()) {
-                if (playerData.playerView().isVisible(targetUUID, currentTick)) {
-                    remaining.add(targetUUID);
-                }
-            }
-
-            if (remaining.size() == packet.getProfileIds().size()) {
-                return;
-            }
-
-            event.setCancelled(true);
-            if (!remaining.isEmpty()) {
-                viewer.sendPacketSilently(new WrapperPlayServerPlayerInfoRemove(remaining));
-            }
-        }
-    }*/
 
     private void handleEntityPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {
         //code readability helper constant
