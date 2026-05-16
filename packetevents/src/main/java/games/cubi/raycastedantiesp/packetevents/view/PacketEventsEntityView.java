@@ -6,11 +6,7 @@ import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -183,5 +179,19 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     private PacketEventsEntity getTrackedEntity(int entityID) {
         UUID entityUUID = entityUUIDsByID.get(entityID);
         return entityUUID == null ? null : entitiesByUUID.get(entityUUID);
+    }
+
+    public String getStringDataForDebugging() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("EntityView isPlayerView=").append(isPlayerView).append("\n");
+        Set<Map.Entry<Integer, UUID>> entries = new HashSet<>(entityUUIDsByID.entrySet());
+        for (Map.Entry<Integer, UUID> entry : entries) {
+            PacketEventsEntity entity = entitiesByUUID.get(entry.getValue());
+            builder.append("EntityID=").append(entry.getKey())
+                    .append(" UUID=").append(entry.getValue())
+                    .append(" Entity=").append(entity.toString())
+                    .append("\n");
+        }
+        return builder.toString();
     }
 }

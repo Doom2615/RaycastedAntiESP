@@ -393,6 +393,27 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
 
     @Override
     public String toString() {
-        return toStringForm();
+        return "NettyEntityLocatable{" +
+                "entityID=" + entityID +
+                ", entityUUID=" + entityUUID +
+                ", isSelfEntity=" + isSelfEntity +
+                ", entityType=" + entityType +
+                ", world=" + world +
+                ", x=" + x +
+                ", y=" + y +
+                ", z=" + z +
+                ", yaw=" + yaw +
+                ", pitch=" + pitch +
+                ", headYaw=" + headYaw +
+                ", velocityX=" + velocityX +
+                ", velocityY=" + velocityY +
+                ", velocityZ=" + velocityZ +
+                ", onGround=" + onGround +
+                ", leashedIDs=" + (leashedIDs == null ? null : IntArrayList.toString(leashedIDs)) +
+                ", leasherID=" + leasherID +
+                ", passengerIDs=" + (passengerIDs == null ? null : IntArrayList.toString(passengerIDs)) +
+                ", vehicleID=" + vehicleID +
+                ", entityData=" + entityData +
+                '}';
     }
 }

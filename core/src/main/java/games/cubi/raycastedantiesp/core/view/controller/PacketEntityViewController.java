@@ -71,7 +71,7 @@ public abstract class PacketEntityViewController<P> {
     protected boolean handleEntitySpawn(P packet, boolean isPlayer, PlayerData playerData, UUID world, int currentTick) {
         if (world == null) {
             Logger.error(new RuntimeException("World null when handling spawn entity packet, uuid=" + playerData.getPlayerUUID() + " tick=" + currentTick), 2, PacketEntityViewController.class);
-            return true;
+            return false;
         }
 
         NettyEntityLocatable<?,?> entity = processEntitySpawn(playerData, packet, world, currentTick);
@@ -277,6 +277,7 @@ public abstract class PacketEntityViewController<P> {
                 Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEntityViewController.class);
                 continue;
             }
+            Logger.debug("Removing entity from view due to destroy packet, entityID=" + entityID + " player=" + playerData.getPlayerUUID() + " tick=" + currentTick);
             entityView.removeEntity(entityID, currentTick);
         }
     }
@@ -350,7 +351,7 @@ public abstract class PacketEntityViewController<P> {
 
         if (entityView == null) {
             Logger.warning("Checked if packet for entity should be cancelled, but entity did not exist. ID: " + entityID + " for player: " + playerData.getPlayerUUID(), 6, PacketEntityViewController.class);
-            return true;
+            return false;
         }
 
         if (entityView.isVisible(entityID)) {

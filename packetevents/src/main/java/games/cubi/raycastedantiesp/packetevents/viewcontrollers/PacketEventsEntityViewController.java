@@ -24,6 +24,7 @@ import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -100,12 +101,14 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         final boolean REQUIRE_EVENT_CANCELLATION = true;
         switch (event.getPacketType()) {
             case PacketType.Play.Server.SPAWN_LIVING_ENTITY -> {
+                Logger.error("Received spawn living entity packet. This packet type should not be used in modern Minecraft versions, and its presence likely indicates a protocol mapping issue. Viewer=" + viewer.getUUID() + " tick=" + currentTick, 2, PacketEventsEntityViewController.class);
                 throw new RuntimeException("Spawn Living Entity packet appeared. This shouldn't exist");
                 //if (handleLivingEntitySpawn(new WrapperPlayServerSpawnLivingEntity(event), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
                  //   event.setCancelled(true);
             }
             case PacketType.Play.Server.SPAWN_ENTITY -> {
                 WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity(event);
+                Logger.debug("Spawning entity for player " + viewer.getUUID() + " entity #" + packet.getEntityId() + " tick=" + currentTick + " type=" + packet.getEntityType().getName());
                 if (handleEntitySpawn(packet, packet.getEntityType().isInstanceOf(EntityTypes.PLAYER), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
@@ -127,6 +130,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 //    event.setCancelled(true);
             }
             case PacketType.Play.Server.SPAWN_PLAYER -> {
+                Logger.error("Received spawn player entity packet. This packet type should not be used in modern Minecraft versions, and its presence likely indicates a protocol mapping issue. Viewer=" + viewer.getUUID() + " tick=" + currentTick, 2, PacketEventsEntityViewController.class);
                 throw new RuntimeException("Spawn Player packet appeared. This shouldn't exist");
                 //if (handlePlayerSpawn(new WrapperPlayServerSpawnPlayer(event), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
                 //    event.setCancelled(true);
@@ -373,7 +377,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }*/
 
     @Override
-    protected NettyEntityLocatable<?,?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
+    protected @NotNull NettyEntityLocatable<?,?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
         WrapperPlayServerSpawnEntity packet = (WrapperPlayServerSpawnEntity) packetWrapper;
         if (packet.getUUID().isEmpty()) {
             Logger.errorAndReturn(new RuntimeException("Entity UUID null when handling spawn entity packet, id=" + packet.getEntityId() + " tick=" + currentTick), 2, PacketEventsEntityViewController.class);

@@ -50,6 +50,8 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
         return (T) this;
     }
 
+    String getStringDataForDebugging();
+
     interface Factory {
         EntityView<?> createEntityView();
     }

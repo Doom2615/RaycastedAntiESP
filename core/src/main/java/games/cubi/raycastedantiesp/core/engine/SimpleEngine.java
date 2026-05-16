@@ -78,26 +78,36 @@ public class SimpleEngine implements Engine {
         for (PlayerData playerData : allPlayers) {
             batches.get(index++ % threads).add(playerData);
         }
-
+        Logger.debug("Tick #" + currentTick);
+        if (currentTick % 60 == 0) {
+            Logger.debug("Printing player data");
+            for (PlayerData playerData : allPlayers) {
+                Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
+                Logger.debug("EntityView:"+ playerData.entityView().getStringDataForDebugging());
+                Logger.debug("PlayerView:"+ playerData.playerView().getStringDataForDebugging());
+            }
+        }
         for (List<PlayerData> batch : batches) {
-            asyncRunner.runNow(() -> {
-                try {
-                    processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
+            asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
+        }
+    }
+
+    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick) {
+        try {
+            processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
+        }
+        finally {
+            int threadsRemaining = tickThreadsRunning.decrementAndGet();
+            if (threadsRemaining < 0) {
+                Logger.warning("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
+                tickThreadsRunning.set(0);
+            }
+            if (threadsRemaining == 0) {
+                long elapsedNanos = System.nanoTime() - tickNanos.get();
+                if (elapsedNanos > 40 * 1000000) {//40 ms
+                    Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
                 }
-                finally {
-                    int threadsRemaining = tickThreadsRunning.decrementAndGet();
-                    if (threadsRemaining < 0) {
-                        Logger.warning("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
-                        tickThreadsRunning.set(0);
-                    }
-                    if (threadsRemaining == 0) {
-                        long elapsedNanos = System.nanoTime() - tickNanos.get();
-                        if (elapsedNanos > 40 * 1000000) {//40 ms
-                            Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
-                        }
-                    }
-                }
-            });
+            }
         }
     }
 

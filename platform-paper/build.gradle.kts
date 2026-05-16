@@ -38,7 +38,7 @@ java {
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.4.1-SNAPSHOT"
+val platformPaperVersion: String = "0.4.3-DEBUG"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
@@ -81,7 +81,8 @@ tasks {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("26.1.2")
+        //minecraftVersion("26.1.2")
+        minecraftVersion("1.21.11")
         jvmArgs("-Xms4G", "-Xmx4G", "-Dcom.mojang.eula.agree=true")
     }
 
