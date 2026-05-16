@@ -58,14 +58,19 @@ public class SimpleEngine implements Engine {
         TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
         DebugConfig debugConfig = config.getDebugConfig();
 
+        Logger.debug("Tick #" + currentTick);
+        if (currentTick % 1200 == 0) {
+            Logger.debug("Printing player data");
+            for (PlayerData playerData : allPlayers) {
+                Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
+                Logger.debug("EntityView:"+ playerData.entityView().getStringDataForDebugging());
+                Logger.debug("PlayerView:"+ playerData.playerView().getStringDataForDebugging());
+            }
+        }
+
         // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
         if (threads == 1) {
-            try {
-                processTickForPlayers(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
-            }
-            finally {
-                tickThreadsRunning.set(0);
-            }
+            subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick);
             return;
         }
 
@@ -78,15 +83,7 @@ public class SimpleEngine implements Engine {
         for (PlayerData playerData : allPlayers) {
             batches.get(index++ % threads).add(playerData);
         }
-        Logger.debug("Tick #" + currentTick);
-        if (currentTick % 60 == 0) {
-            Logger.debug("Printing player data");
-            for (PlayerData playerData : allPlayers) {
-                Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
-                Logger.debug("EntityView:"+ playerData.entityView().getStringDataForDebugging());
-                Logger.debug("PlayerView:"+ playerData.playerView().getStringDataForDebugging());
-            }
-        }
+
         for (List<PlayerData> batch : batches) {
             asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
         }
