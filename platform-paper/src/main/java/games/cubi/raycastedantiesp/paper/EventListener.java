@@ -60,10 +60,8 @@ public class EventListener extends PaperListener {
 
         if (playerData == null) {
             Logger.warning("Failed to load player data for " + player.getName() + " (" + player.getUniqueId() + "). Attempting to reconstruct.", 3, EventListener.class);
-            PlayerRegistry.getInstance().registerPlayerIfAbsent(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
-            return;
+            playerData = PlayerRegistry.getInstance().registerAndGetPlayerIfAbsent(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
         }
-
         playerData.setBypassPermission(hasBypassPermission);
         updateOwnLocation(playerData, player.getEyeLocation());
     }
