@@ -57,6 +57,13 @@ public class EventListener extends PaperListener {
 
         boolean hasBypassPermission = player.hasPermission("raycastedantiesp.bypass");
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+
+        if (playerData == null) {
+            Logger.warning("Failed to load player data for " + player.getName() + " (" + player.getUniqueId() + "). Attempting to reconstruct.", 3, EventListener.class);
+            PlayerRegistry.getInstance().registerPlayerIfAbsent(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
+            return;
+        }
+
         playerData.setBypassPermission(hasBypassPermission);
         updateOwnLocation(playerData, player.getEyeLocation());
     }

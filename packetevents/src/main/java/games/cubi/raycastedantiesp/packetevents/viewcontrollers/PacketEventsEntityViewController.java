@@ -68,6 +68,10 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTickSupplier.getAsInt());
         }
 
+        if (playerData == null) {
+            return;
+        }
+
         if (ConfigManager.get().getEntityConfig() != entityConfig) {
             entityConfig = ConfigManager.get().getEntityConfig();
             hideOnSpawnEntityDistanceSquared = entityConfig.hideOnSpawnDistance() * entityConfig.hideOnSpawnDistance();
