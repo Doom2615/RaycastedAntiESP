@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.function.IntSupplier;
 
 import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_LEASHER;
+import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
     private final IntSupplier currentTickSupplier;
@@ -778,7 +779,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
         }
         common.writeIfPresent(viewer, buildPassengersPacket(entity, data));
-        common.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data));
+        if (entity.vehicleID() != NO_VEHICLE) {
+            common.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data));
+        }
         WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data);
         if (leashPackets == null) return;
         for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_LEASHER;
+import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
 
 /**
  * @param <P> The platform's packet wrapper (PacketWrapper<?>)
