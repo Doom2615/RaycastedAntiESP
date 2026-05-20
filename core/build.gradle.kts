@@ -25,7 +25,7 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
 }
 
-val coreVersion = "0.3.4-SNAPSHOT"
+val coreVersion = "0.3.5-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")

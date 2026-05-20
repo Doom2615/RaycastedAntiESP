@@ -48,44 +48,65 @@ public class SimpleEngine implements Engine {
             return;
         }
 
-        tickNanos.set(System.nanoTime());
+        boolean handedOffToSubTick = false;
+        try {
+            tickNanos.set(System.nanoTime());
 
-        final int currentTick = currentTickSupplier.getAsInt();
-        Collection<PlayerData> allPlayers = PlayerRegistry.getInstance().getAllPlayerData();
+            final int currentTick = currentTickSupplier.getAsInt();
+            Collection<PlayerData> allPlayers = PlayerRegistry.getInstance().getAllPlayerData();
 
-        EntityConfig entityConfig = config.getEntityConfig();
-        PlayerConfig playerConfig = config.getPlayerConfig();
-        TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
-        DebugConfig debugConfig = config.getDebugConfig();
+            EntityConfig entityConfig = config.getEntityConfig();
+            PlayerConfig playerConfig = config.getPlayerConfig();
+            TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
+            DebugConfig debugConfig = config.getDebugConfig();
+            /*
+            Logger.debug("Tick #" + currentTick);
+            if (currentTick % 1200 == 0) {
+                Logger.debug("Printing player data");
+                for (PlayerData playerData : allPlayers) {
+                    Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
+                    Logger.debug("EntityView:" + playerData.entityView().getStringDataForDebugging());
+                    Logger.debug("PlayerView:" + playerData.playerView().getStringDataForDebugging());
+                }
+            }*/
 
-        Logger.debug("Tick #" + currentTick);
-        if (currentTick % 1200 == 0) {
-            Logger.debug("Printing player data");
+            // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
+            if (threads == 1) {
+                handedOffToSubTick = true;
+                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick);
+                return;
+            }
+
+            List<List<PlayerData>> batches = new ArrayList<>(threads);
+            for (int i = 0; i < threads; i++) {
+                batches.add(new ArrayList<>());
+            }
+
+            int index = 0;
             for (PlayerData playerData : allPlayers) {
-                Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
-                Logger.debug("EntityView:"+ playerData.entityView().getStringDataForDebugging());
-                Logger.debug("PlayerView:"+ playerData.playerView().getStringDataForDebugging());
+                batches.get(index++ % threads).add(playerData);
+            }
+
+            int scheduledBatches = 0;
+            try {
+                for (List<PlayerData> batch : batches) {
+                    asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
+                    scheduledBatches++;
+                }
+                handedOffToSubTick = true;
+            }
+            finally {
+                if (scheduledBatches < threads) {
+                    tickThreadsRunning.addAndGet(-(threads - scheduledBatches));
+                    handedOffToSubTick = true;
+                }
             }
         }
-
-        // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
-        if (threads == 1) {
-            subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick);
-            return;
-        }
-
-        List<List<PlayerData>> batches = new ArrayList<>(threads);
-        for (int i = 0; i < threads; i++) {
-            batches.add(new ArrayList<>());
-        }
-
-        int index = 0;
-        for (PlayerData playerData : allPlayers) {
-            batches.get(index++ % threads).add(playerData);
-        }
-
-        for (List<PlayerData> batch : batches) {
-            asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
+        finally {
+            if (!handedOffToSubTick) {
+                tickThreadsRunning.set(0);
+                Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
+            }
         }
     }
 
