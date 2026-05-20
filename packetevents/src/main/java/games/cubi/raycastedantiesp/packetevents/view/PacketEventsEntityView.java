@@ -189,7 +189,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
             PacketEventsEntity entity = entitiesByUUID.get(entry.getValue());
             builder.append("EntityID=").append(entry.getKey())
                     .append(" UUID=").append(entry.getValue())
-                    .append(" Entity=").append(entity.toString())
+                    .append(" Entity=").append(entity)
                     .append("\n");
         }
         return builder.toString();
