@@ -24,6 +24,12 @@ dependencies {
     compileOnly("it.unimi.dsi:fastutil:8.5.18")
     implementation(project(":locatable-lib"))
     compileOnly(project(":logging"))
+
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("it.unimi.dsi:fastutil:8.5.18")
 }
 
 val coreVersion = "0.5.0-SNAPSHOT"
@@ -74,6 +80,10 @@ tasks {
         filesMatching("build-properties/core.yml") {
             expand(gitProps)
         }
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 
