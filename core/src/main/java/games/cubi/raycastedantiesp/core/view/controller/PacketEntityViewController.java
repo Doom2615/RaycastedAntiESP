@@ -339,11 +339,12 @@ public abstract class PacketEntityViewController<P> {
             NettyEntityLocatable<?,?> leashing = playerData.entityFromID(leashingEntity);
             if (leashing == null) {
                 playerData.nettyData().addUnresolvedLeash(leashingEntity, leashedEntity);
+                return cancelIfEnabledAndHidden(leashedEntity, playerData);
             }
             else {
                 leashing.addLeashedEntity(leashedEntity);
+                return cancelIfEnabledAndHidden(leashedEntity, playerData) || cancelIfEnabledAndHidden(leashingEntity, playerData);
             }
-            return cancelIfEnabledAndHidden(leashedEntity, playerData) || cancelIfEnabledAndHidden(leashingEntity, playerData);
         }
     }
 
