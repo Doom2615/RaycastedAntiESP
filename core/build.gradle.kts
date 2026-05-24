@@ -13,12 +13,12 @@ repositories {
 dependencies {
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
-
+    compileOnly("it.unimi.dsi:fastutil:8.5.18")
     implementation(project(":locatable-lib"))
     compileOnly(project(":logging"))
 }
 
-val coreVersion = "0.3.5-SNAPSHOT"
+val coreVersion = "0.3.6-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")

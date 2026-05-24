@@ -22,11 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PaperLoggerAdapter implements PlatformLogger {
 
-    /*
-     * Set this to true to send logs to the file instead of the console.
-     * Set this to false to use the normal Paper console logger.
+    /**
+     * Set this to true to send logs to the file regardless of the log level.
      */
-    private static final boolean LOG_TO_FILE = false;
+    private static final boolean LOG_TO_FILE = true;
 
     /*
      * If too many logs queue up before clear() is called, flush them anyway.
@@ -108,7 +107,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
 
     @Deprecated @Override
     public void debug(String message) {
-        //forwardLog(message, Level.INFO, 1);
+        forwardLog(message, Level.INFO, 10);
     }
 
     @Override
@@ -139,9 +138,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
     private void forwardLog(String message, Level severity, int level, Class<?>... source) {
         ConfigManager configManager = RaycastedAntiESP.getConfigManager();
         if (LOG_TO_FILE) {
-            message = PlatformLogger.constructFileLogMessage(message, severity, level, source);
-            queueFileLog(message, severity);
-            return;
+            queueFileLog(PlatformLogger.constructFileLogMessage(message, severity, level, source), severity);
         }
         if (configManager != null && configManager.getDebugConfig() != null) {
             DebugConfig debug = configManager.getDebugConfig();

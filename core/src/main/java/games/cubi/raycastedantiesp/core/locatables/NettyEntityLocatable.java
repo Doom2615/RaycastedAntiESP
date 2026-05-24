@@ -36,7 +36,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     private int@IntArrayListMarker[] leashedIDs;
     private int leasherID = NO_LEASHER;
     private int[] passengerIDs;
-    private int vehicleID = -1;
+    private int vehicleID = NO_VEHICLE;
 
 
     private volatile int entityData;
@@ -263,6 +263,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         return IntArrayList.getCopyOrNull(leashedIDs);
     }
 
+    public static final int NO_VEHICLE = -1;
     public static final int NO_LEASHER = -2;
 
     @Override
@@ -375,7 +376,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         packetReplayData.clear();
         packetReplayData = null;
 
-        vehicleID = -1;
+        vehicleID = NO_VEHICLE;
         passengerIDs = null;
         leashedIDs = null;
         leasherID = NO_LEASHER;
