@@ -40,10 +40,13 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
     private final IntSupplier currentTickSupplier;
     private final PacketEventsCommonViewController common;
+    private final IntSupplier CURRENT_TICK_SUPPLIER;
+    private final PacketEventsCommonViewController COMMON;
 
     protected PacketEventsEntityViewController(IntSupplier currentTickSupplier) {
         this.currentTickSupplier = currentTickSupplier;
         common = PacketEventsCommonViewController.get(currentTickSupplier);
+        this.CURRENT_TICK_SUPPLIER = currentTickSupplier;
     }
 
     protected abstract UUID resolveWorldUUID(User user);
@@ -61,13 +64,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
 
         if (event.getPacketType() == PacketType.Login.Server.LOGIN_SUCCESS) {
-            handleLoginPhaseLoginPacket(viewerUUID, currentTickSupplier.getAsInt());
+            handleLoginPhaseLoginPacket(viewerUUID, CURRENT_TICK_SUPPLIER.getAsInt());
             return;
         }
 
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);
-            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTickSupplier.getAsInt());
+            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, CURRENT_TICK_SUPPLIER.getAsInt());
         }
 
         if (playerData == null) {
@@ -86,7 +89,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         Locatable ownLocation = playerData.ownLocation();
         UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
-        int currentTick = currentTickSupplier.getAsInt();
+        int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
 
         playerData.runAllNettyTasks();
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
@@ -593,9 +596,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
         }
-        common.writeIfPresent(viewer, buildPassengersPacket(entity, data));
+        COMMON.writeIfPresent(viewer, buildPassengersPacket(entity, data));
         if (entity.vehicleID() != NO_VEHICLE) {
-            common.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data));
+            COMMON.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data));
         }
         WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data);
         if (leashPackets == null) return;
