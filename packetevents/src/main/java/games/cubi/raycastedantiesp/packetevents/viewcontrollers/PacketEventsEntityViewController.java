@@ -40,19 +40,12 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
     private final IntSupplier CURRENT_TICK_SUPPLIER;
     private final PacketEventsCommonViewController COMMON;
-    private static PacketEventsEntityViewController SELF;
+    private static PacketEventsEntityViewController SELF; //TODO Switch to LazyConstant once out of preview (see https://openjdk.org/jeps/526)
 
-    {
-        synchronized (PacketEventsEntityViewController.class) {
-            if (SELF != null) {
-                throw new IllegalStateException("Multiple instances of PacketEventsEntityViewController created.");
-            }
-            SELF = this;
-
+    public static PacketEventsEntityViewController get() {
+        if (SELF == null) {
+            SELF = (PacketEventsEntityViewController) PacketEntityViewController.get();
         }
-    }
-
-    static PacketEventsEntityViewController get() {
         return SELF;
     }
 
