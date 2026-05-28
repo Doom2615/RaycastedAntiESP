@@ -63,7 +63,7 @@ Contributions via pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.
 
 ## Forking:
 
-Please see the the [AGPL v3 license](LICENSE)—especially section 5, section 7, and section 13—before forking this repository, as there are some specific legal requirements for forks. 
+Please see the [AGPL v3 license](LICENSE)—especially section 5, section 7, and section 13—before forking this repository, as there are some specific legal requirements for forks. 
 
 In summary, translated into layman, plugin-specific terms, the most important requirements for forks are as follows:
 1. Forks must not remove any names currently present in the authors/contributors list in the plugin's description, as this falls under the "preservation of specified reasonable legal notices or author attributions".
