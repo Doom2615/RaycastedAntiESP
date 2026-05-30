@@ -107,6 +107,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         
         event.getUser().flushPackets();
+        playerData.nettyData().evictPendingPostSpawnTasksIfRequired(currentTick);
     }
 
     private void handleEntityPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {

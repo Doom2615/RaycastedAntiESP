@@ -133,7 +133,7 @@ public class SimpleEngine implements Engine {
                                        boolean debugParticles, int currentTick) {
 
         for (PlayerData playerData : playerDataList) {
-            playerData.nettyData().evictOldPendingPostSpawnTasks(currentTick);
+            playerData.nettyData().markPendingPostSpawnTasksForEviction();
             if (playerData.hasBypassPermission()) continue;
 
             BlockView blockView = playerData.blockView();
