@@ -76,7 +76,7 @@ In summary, translated into layman, plugin-specific terms, the most important re
 ## Copyright and Disclaimer:
 Copyright © 2025-2026 Cubicake and Contributors
 
-This project is licensed under the GNU Affero General Public License v3.0 only (AGPLv3). You may copy, modify, and redistribute this software only in compliance with the terms of that licence. A copy of the licence is provided in the [LICENSE] file.
+This project is licensed under the GNU Affero General Public License v3.0 only (AGPLv3). You may copy, modify, and redistribute this software only in compliance with the terms of that licence. A copy of the licence is provided in the [LICENSE](LICENSE) file.
 
 If you modify and deploy this software for remote network interaction, including operating a public multiplayer server, you must make the complete corresponding source code of the modified version available to all users interacting with the software over the network, as required by section 13 of the AGPLv3.
 
