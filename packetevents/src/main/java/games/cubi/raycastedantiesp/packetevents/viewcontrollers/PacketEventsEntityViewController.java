@@ -378,7 +378,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             Logger.error("Attempted to send passenger packet for unknown entity, id=" + vehicle, 2, PacketEventsEntityViewController.class);
             return;
         }
-        WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.elements());
+        WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.toIntArray());
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
         PacketEvents.getAPI().getProtocolManager().getUser(channel).writePacketSilently(packet);
     }
