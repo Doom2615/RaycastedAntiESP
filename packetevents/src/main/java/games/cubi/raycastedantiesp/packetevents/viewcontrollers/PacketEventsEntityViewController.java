@@ -19,7 +19,7 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
-import games.cubi.raycastedantiesp.core.utils.IntArrayList;
+import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
@@ -634,7 +634,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     private void reconcileUnresolvedLeashes(NettyEntityLocatable<?,?> insertedEntity, PlayerData playerData) {
         int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(insertedEntity.entityID());
-        if (IntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+        if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
             return;
         }
         for (int leashedEntityID : pendingLeashedEntityIDs) {

@@ -7,7 +7,7 @@ import games.cubi.raycastedantiesp.core.config.raycast.RaycastConfig;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
-import games.cubi.raycastedantiesp.core.utils.IntArrayList;
+import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
 import games.cubi.raycastedantiesp.core.utils.Packet;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 
@@ -282,7 +282,7 @@ public abstract class PacketEntityViewController<P> {
 
     private void clearPendingHolderReference(int holderEntityID, PlayerData playerData) {
         int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(holderEntityID);
-        if (IntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+        if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
             return;
         }
         for (int leashedEntityID : pendingLeashedEntityIDs) {

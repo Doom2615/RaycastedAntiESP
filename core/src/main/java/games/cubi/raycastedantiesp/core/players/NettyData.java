@@ -23,22 +23,22 @@ public class NettyData implements Clearable {
 
     public void addUnresolvedLeash(int holderEntityID, int leashedEntityID) {
         unresolvedLeashedEntityIDsByHolderID.compute(holderEntityID, (ignored, existing) -> {
-            if (IntArrayList.contains(existing, leashedEntityID)) {
+            if (PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
                 return existing;
             }
-            return IntArrayList.add(existing, leashedEntityID);
+            return PrimitiveIntArrayList.add(existing, leashedEntityID);
         });
     }
 
     public boolean removeUnresolvedLeash(int holderEntityID, int leashedEntityID) {
         final boolean[] removed = new boolean[1];
         unresolvedLeashedEntityIDsByHolderID.computeIfPresent(holderEntityID, (ignored, existing) -> {
-            if (!IntArrayList.contains(existing, leashedEntityID)) {
+            if (!PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
                 return existing;
             }
             removed[0] = true;
-            int[] updated = IntArrayList.remove(existing, leashedEntityID);
-            return IntArrayList.isEmpty(updated) ? null : updated;
+            int[] updated = PrimitiveIntArrayList.remove(existing, leashedEntityID);
+            return PrimitiveIntArrayList.isEmpty(updated) ? null : updated;
         });
         return removed[0];
     }
