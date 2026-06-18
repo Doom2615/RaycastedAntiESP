@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.PacketEvents;
@@ -10,6 +18,7 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.Equipment;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.teleport.RelativeFlag;
+import com.github.retrooper.packetevents.protocol.world.dimension.DimensionType;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
@@ -217,9 +226,15 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
+            case PacketType.Play.Server.RESPAWN -> {
+                WrapperPlayServerRespawn packet = new WrapperPlayServerRespawn(event);
+                handleRespawnPacket(viewer.getUUID(), getWorld(packet.getDimensionType()), packet.getDimensionType().getMinY(), currentTick);
+            }
             default -> {}
         }
     }
+
+    protected abstract String getWorld(DimensionType dimensionType);
 
     protected NettyEntityLocatable<?,?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID) {
         return PacketEventsEntity.createSelfEntity(ownData, entityID, playerUUID);

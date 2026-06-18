@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.view.controller;
 
 import games.cubi.logs.Logger;
@@ -42,6 +50,20 @@ public abstract class PacketEntityViewController<P> {
     protected PlayerConfig playerConfig = null;
     protected double hideOnSpawnEntityDistanceSquared = 0;
     protected double hideOnSpawnPlayerDistanceSquared = 0;
+
+    protected void handleRespawnPacket(UUID player, String world, int minWorldHeight, int currentTick) {
+        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player);
+        if (playerData == null) {
+            Logger.error("Received respawn packet for unknown player, uuid=" + player, 2, PacketEntityViewController.class);
+            return;
+        }
+        if (world.equals(playerData.nettyData().getCurrentWorldName())) return;
+        playerData.entityView().clear();
+        playerData.playerView().clear();
+        playerData.blockView().clear();
+
+        playerData.nettyData().setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
+    }
 
     protected void handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(playerUUID);
