@@ -19,11 +19,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 
-public class SimpleEngine implements Engine {
+public abstract class SimpleEngine implements Engine {
     private static final long SLOW_TICK_NANOS = 40 * 1_000_000L;
 
     private final ConfigManager config;
@@ -31,6 +32,11 @@ public class SimpleEngine implements Engine {
     private final IntSupplier currentTickSupplier;
     private final AtomicInteger tickThreadsRunning = new AtomicInteger(0);
     private final AtomicInteger runningTick = new AtomicInteger(-1);
+
+    //private final AtomicBoolean tickPendingOrRunning = new AtomicBoolean(false);
+
+    private final AtomicBoolean tickPending = new AtomicBoolean(false);
+    private final AtomicBoolean tickRunning = new AtomicBoolean(false);
     private final AtomicLong tickNanos = new AtomicLong(0);
     private final AsyncRunner asyncRunner;
     private final TimingStats timingStats = new TimingStats();
@@ -43,11 +49,39 @@ public class SimpleEngine implements Engine {
         this.asyncRunner = asyncRunner;
     }
 
+    /**
+     * Sets tickPending to true if both it and tickRunning are false, and returns true if it was able to set it to true. There is however a small possibility of this returning true incorrectly due to it not actually being atomic.
+     * @return true if it was able to set tickPending to true, false otherwise. If it returns false, the caller should not schedule a tick, as one is already pending or running.
+     */
+    public boolean markTickRunning() {
+        // If tickRunning is true, we can't run a tick, so return false
+        if (tickRunning.get()) {
+            timingStats.recordSkipped(-1, System.nanoTime());
+            return false;
+        }
+
+        if (tickPending.compareAndSet(false, true)) {
+            return true;
+        }
+        timingStats.recordSkipped(-1, System.nanoTime());
+        return false;
+    }
+
     @Override
     public void tick(int scheduledTick, long scheduledNanos) {
+        if (!tickPending.get()) {
+            // This means that this tick was dispatched but not marked as such, or was unmarked at some point.
+            Logger.warning("Tick " + scheduledTick + " was dispatched but not marked as pending. This suggests a race condition. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
+        }
         boolean runTick = true;
         int startTick = currentTickSupplier.getAsInt();
         while (runTick) {
+            tickPending.set(false);
+            if (!tickRunning.compareAndSet(false, true)) {
+                // This means there is already a tick running, so we should exit
+                Logger.info("Tick " + scheduledTick + " is pending but another tick is already running. Exiting now.", 6, SimpleEngine.class);
+                return;
+            }
             dispatchTick(scheduledTick, startTick, scheduledNanos);
 
             int latestTick = currentTickSupplier.getAsInt();
@@ -57,6 +91,12 @@ public class SimpleEngine implements Engine {
                 startTick = latestTick;
                 scheduledNanos = System.nanoTime();
                 scheduledTick = latestTick;
+
+                if (tickRunning.get()) {
+                    // This means that there is already a tick running, so we should exit
+                    Logger.info("Tick finished behind but another thread had already begun ticking the next tick.", 5, SimpleEngine.class);
+                    return;
+                }
             }
             else runTick = false;
         }
@@ -171,7 +211,7 @@ public class SimpleEngine implements Engine {
         finally {
             if (!handedOffToSubTick) {
                 tickThreadsRunning.set(0);
-                runningTick.compareAndSet(startTick, -1);
+                finaliseTick(startTick);
                 Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
             }
         }
@@ -191,7 +231,7 @@ public class SimpleEngine implements Engine {
             if (threadsRemaining < 0) {
                 Logger.error("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
                 tickThreadsRunning.set(0);
-                runningTick.compareAndSet(currentTick, -1);
+                finaliseTick(currentTick);
             }
             if (threadsRemaining == 0) {
                 try {
@@ -210,9 +250,17 @@ public class SimpleEngine implements Engine {
                         }
                     }
                 } finally {
-                    runningTick.compareAndSet(currentTick, -1);
+                    finaliseTick(currentTick);
                 }
             }
+        }
+    }
+
+    private void finaliseTick(int currentTick) {
+        runningTick.compareAndSet(currentTick, -1);
+        if (!tickRunning.getAndSet(false)) {
+            // This should never happen as it means the tick was marked as completed before processing was completed
+            Logger.warning("tickRunning was false when completing tick! This should never happen. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
         }
     }
 

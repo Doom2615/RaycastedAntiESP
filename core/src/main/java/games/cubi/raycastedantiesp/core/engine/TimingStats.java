@@ -69,7 +69,7 @@ final class TimingStats {
     synchronized String recordSkipped(int threads, long nowNanos) {
         ensureInterval(nowNanos);
         skippedTicks++;
-        lastThreads = threads;
+        if (threads != -1) lastThreads = threads;
         return reportIfDue(nowNanos);
     }
 

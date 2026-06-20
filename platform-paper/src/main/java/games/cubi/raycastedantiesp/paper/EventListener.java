@@ -90,6 +90,10 @@ public class EventListener extends PaperListener {
 
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
     public void serverTickStartEvent(ServerTickStartEvent event) {
+        if (!engine.markTickRunning()) {
+            Logger.info("Skipped starting tick because previous tick is still running. This likely means the server is overloaded.", 6, EventListener.class);
+            return;
+        }
         // Capture this before async handoff so timing diagnostics can separate scheduler queueing from engine work.
         int scheduledTick = currentTickSupplier.getAsInt();
         long scheduledNanos = System.nanoTime();
