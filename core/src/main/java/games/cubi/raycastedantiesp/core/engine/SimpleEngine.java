@@ -24,12 +24,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 
 public class SimpleEngine implements Engine {
+    private static final long SLOW_TICK_NANOS = 40 * 1_000_000L;
+
     private final ConfigManager config;
     private final ParticleSpawner particleSpawner;
     private final IntSupplier currentTickSupplier;
     private final AtomicInteger tickThreadsRunning = new AtomicInteger(0);
+    private final AtomicInteger runningTick = new AtomicInteger(-1);
     private final AtomicLong tickNanos = new AtomicLong(0);
     private final AsyncRunner asyncRunner;
+    private final TimingStats timingStats = new TimingStats();
+    private volatile boolean timingStatsWereEnabled = false;
 
     public SimpleEngine(ConfigManager config, ParticleSpawner particleSpawner, IntSupplier currentTickSupplier, AsyncRunner asyncRunner) {
         this.config = config;
@@ -39,26 +44,86 @@ public class SimpleEngine implements Engine {
     }
 
     @Override
-    public void tick() {
+    public void tick(int scheduledTick, long scheduledNanos) {
+        boolean runTick = true;
+        int startTick = currentTickSupplier.getAsInt();
+        while (runTick) {
+            dispatchTick(scheduledTick, startTick, scheduledNanos);
+
+            int latestTick = currentTickSupplier.getAsInt();
+            if (latestTick > startTick) {
+                // If running behind, don't yield the thread, just run the next tick immediately
+                Logger.warning("Tick thread completed tick #" + startTick + " after tick #" + latestTick + " had already begun. Starting next tick immediately instead of yielding thread to scheduler. This is probably safe to ignore but may suggest that your server is overloaded.", 5);
+                startTick = latestTick;
+                scheduledNanos = System.nanoTime();
+                scheduledTick = latestTick;
+            }
+            else runTick = false;
+        }
+    }
+
+    private void dispatchTick(int scheduledTick, int startTick, long scheduledNanos) {
         int threads = config.getEngineConfig().simpleConfig().asyncProcessingThreads();
         if (threads < 1) threads = 1;
 
-        if (!tickThreadsRunning.compareAndSet(0, threads)) {
-            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
+        DebugConfig debugConfig = config.getDebugConfig();
+        boolean recordTimings = debugConfig.recordTimings();
+        if (recordTimings) {
+            timingStatsWereEnabled = true;
+        } else if (timingStatsWereEnabled) {
+            // Timing stats were enabled last time but not anymore
+            timingStats.reset();
+            timingStatsWereEnabled = false;
+        }
+
+        long startNanos = System.nanoTime();
+
+        int tickAlreadyRunning = runningTick.get();
+        // First guard for the current tick already being processed (can happen if the previous tick ran overtime and thus didn't yield the thread)
+        if (scheduledTick == tickAlreadyRunning) {
+            if (recordTimings) {
+                String aggregateReport = timingStats.recordSkipped(threads, startNanos);
+                logAggregateReport(aggregateReport);
+            }
+            Logger.info("RaycastedAntiESP is already processing this tick; skipping duplicate same-tick attempt."
+                    + " scheduledTick=" + scheduledTick
+                    + " currentServerTick=" + startTick
+                    + " currentRunningTick=" + tickAlreadyRunning, 6, SimpleEngine.class);
             return;
         }
 
+        int runningThreads = tickThreadsRunning.compareAndExchange(0, threads);
+        // Now guard for previous tick still running
+        if (runningThreads != 0) {
+            long queueNanos = Math.max(0, startNanos - scheduledNanos);
+            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues."
+                    + " scheduledTick=" + scheduledTick
+                    + " currentServerTick=" + currentTickSupplier.getAsInt()
+                    + " currentRunningTick=" + tickAlreadyRunning
+                    + " runningThreads=" + runningThreads
+                    + " timeSpentInQueue=" + TickTimingFormatter.formatMillis(queueNanos) + "ms", 5, SimpleEngine.class);
+            if (recordTimings) {
+                String aggregateReport = timingStats.recordSkipped(threads, startNanos);
+                logAggregateReport(aggregateReport);
+            }
+            return;
+        }
+
+        TickTimings timings = null;
         boolean handedOffToSubTick = false;
         try {
-            tickNanos.set(System.nanoTime());
+            tickNanos.set(startNanos);
 
-            final int currentTick = currentTickSupplier.getAsInt();
+            final int currentTick = startTick;
+            runningTick.set(currentTick);
             Collection<PlayerData> allPlayers = PlayerRegistry.getInstance().getAllPlayerData();
 
             EntityConfig entityConfig = config.getEntityConfig();
             PlayerConfig playerConfig = config.getPlayerConfig();
             TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
-            DebugConfig debugConfig = config.getDebugConfig();
+            if (recordTimings) {
+                timings = new TickTimings(scheduledTick, scheduledNanos, currentTick, startNanos, threads, allPlayers.size());
+            }
             /*
             Logger.debug("Tick #" + currentTick);
             if (currentTick % 1200 == 0) {
@@ -73,7 +138,7 @@ public class SimpleEngine implements Engine {
             // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
             if (threads == 1) {
                 handedOffToSubTick = true;
-                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick);
+                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, timings);
                 return;
             }
 
@@ -87,10 +152,11 @@ public class SimpleEngine implements Engine {
                 batches.get(index++ % threads).add(playerData);
             }
 
+            TickTimings tickTimings = timings; // needs to be effectively-final for lambda
             int scheduledBatches = 0;
             try {
                 for (List<PlayerData> batch : batches) {
-                    asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
+                    asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, tickTimings));
                     scheduledBatches++;
                 }
                 handedOffToSubTick = true;
@@ -98,105 +164,162 @@ public class SimpleEngine implements Engine {
             finally {
                 if (scheduledBatches < threads) {
                     tickThreadsRunning.addAndGet(-(threads - scheduledBatches));
-                    handedOffToSubTick = true;
+                    handedOffToSubTick = scheduledBatches > 0;
                 }
             }
         }
         finally {
             if (!handedOffToSubTick) {
                 tickThreadsRunning.set(0);
+                runningTick.compareAndSet(startTick, -1);
                 Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
             }
         }
     }
 
-    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick) {
+    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick, TickTimings timings) {
+        TickTimingBatch batchTimings = timings == null ? TickTimingBatchNoOp.INSTANCE : new TickTimingBatch();
+        long batchStartNanos = batchTimings.startBatch();
         try {
-            processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
+            processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick, batchTimings);
         }
         finally {
+            if (timings != null) {
+                timings.recordBatch(batchTimings, batchTimings.elapsedSince(batchStartNanos));
+            }
             int threadsRemaining = tickThreadsRunning.decrementAndGet();
             if (threadsRemaining < 0) {
-                Logger.warning("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
+                Logger.error("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
                 tickThreadsRunning.set(0);
+                runningTick.compareAndSet(currentTick, -1);
             }
             if (threadsRemaining == 0) {
-                long elapsedNanos = System.nanoTime() - tickNanos.get();
-                if (elapsedNanos > 40 * 1000000) {//40 ms
-                    Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
+                try {
+                    long completionNanos = System.nanoTime();
+                    if (timings != null) {
+                        TickTimingSnapshot snapshot = timings.snapshot(currentTickSupplier.getAsInt(), completionNanos);
+                        String aggregateReport = timingStats.recordCompleted(snapshot, completionNanos);
+                        if (snapshot.wallNanos() > SLOW_TICK_NANOS) {
+                            Logger.warning(snapshot.toSlowTickMessage(), 5, SimpleEngine.class);
+                        }
+                        logAggregateReport(aggregateReport);
+                    } else {
+                        long elapsedNanos = completionNanos - tickNanos.get();
+                        if (elapsedNanos > SLOW_TICK_NANOS) {
+                            Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
+                        }
+                    }
+                } finally {
+                    runningTick.compareAndSet(currentTick, -1);
                 }
             }
         }
     }
 
     private void processTickForPlayers(List<PlayerData> playerDataList, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig,
-                                       boolean debugParticles, int currentTick) {
+                                       boolean debugParticles, int currentTick, TickTimingBatch timings) {
 
         for (PlayerData playerData : playerDataList) {
             playerData.nettyData().markPendingPostSpawnTasksForEviction();
-            if (playerData.hasBypassPermission()) continue;
+            if (playerData.hasBypassPermission()) {
+                timings.incrementBypassSkippedPlayers();
+                continue;
+            }
 
             BlockView blockView = playerData.blockView();
 
             Locatable playerLocation = playerData.ownLocation();
             if (playerLocation == null) {
+                timings.incrementNullLocationSkippedPlayers();
                 continue;
             }
+            timings.incrementProcessedPlayers();
 
-            if (entityConfig.enabled()) checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick);
-            if (playerConfig.enabled()) checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick);
-            if (tileEntityConfig.enabled()) checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick);
+            if (entityConfig.enabled()) {
+                long sectionStartNanos = timings.startEntitySection();
+                checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick, timings);
+                timings.finishEntitySection(sectionStartNanos);
+            }
+            if (playerConfig.enabled()) {
+                long sectionStartNanos = timings.startPlayerSection();
+                checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick, timings);
+                timings.finishPlayerSection(sectionStartNanos);
+            }
+            if (tileEntityConfig.enabled()) {
+                long sectionStartNanos = timings.startTileSection();
+                checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick, timings);
+                timings.finishTileSection(sectionStartNanos);
+            }
         }
     }
 
-    private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick) {
+    private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> entityView = player.entityView();
 
-        for (UUID entityUUID : entityView.getNeedingRecheck(entityConfig.getVisibleRecheckIntervalTicks(), currentTick)) {
+        Collection<UUID> needingRecheck = entityView.getNeedingRecheck(entityConfig.getVisibleRecheckIntervalTicks(), currentTick);
+        timings.addEntityChecked(needingRecheck.size());
+        for (UUID entityUUID : needingRecheck) {
             boolean wasVisible = entityView.isVisible(entityUUID, currentTick);
             Locatable entityLocation = entityView.getLocation(entityUUID);
             if (entityLocation == null) {
+                timings.incrementEntityNullTargets();
                 Logger.debug("SimpleEngine.checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
                         + " target=" + entityUUID
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
                 continue;
             }
+            timings.incrementEntityRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, entityLocation, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
             entityView.setVisibility(entityUUID, canSee, currentTick);
         }
     }
 
-    private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick) {
+    private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> playerView = player.playerView();
 
-        for (UUID otherPlayerUUID : playerView.getNeedingRecheck(playerConfig.getVisibleRecheckIntervalTicks(), currentTick)) {
+        Collection<UUID> needingRecheck = playerView.getNeedingRecheck(playerConfig.getVisibleRecheckIntervalTicks(), currentTick);
+        timings.addPlayerChecked(needingRecheck.size());
+        for (UUID otherPlayerUUID : needingRecheck) {
             boolean wasVisible = playerView.isVisible(otherPlayerUUID, currentTick);
             Locatable otherPlayerLocation = playerView.getLocation(otherPlayerUUID);
             if (otherPlayerLocation == null) {
+                timings.incrementPlayerNullTargets();
                 Logger.debug("SimpleEngine.checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
                         + " target=" + otherPlayerUUID
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
                 continue;
             }
+            timings.incrementPlayerRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, otherPlayerLocation, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
             playerView.setVisibility(otherPlayerUUID, canSee, currentTick);
         }
     }
 
-    private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick) {
-        for (BlockLocatable tileEntityLocation : blockView.getNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick)) {
+    private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
+        Collection<BlockLocatable> needingRecheck = blockView.getNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick);
+        timings.addTileChecked(needingRecheck.size());
+        for (BlockLocatable tileEntityLocation : needingRecheck) {
             if (tileEntityLocation.world() == null || !tileEntityLocation.world().equals(playerLocation.world())) {
+                timings.incrementTileWorldSkipped();
                 continue;
             }
 
             if (playerLocation.distanceSquared(tileEntityLocation) > (double) tileEntityConfig.getRaycastRadius() * tileEntityConfig.getRaycastRadius()) {
+                timings.incrementTileRadiusSkipped();
                 blockView.setVisibility(tileEntityLocation, false, currentTick);
                 continue;
             }
+            timings.incrementTileRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, tileEntityLocation, tileEntityConfig.getMaxOccludingCount() + 1, tileEntityConfig.getAlwaysShowRadius(), tileEntityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
             blockView.setVisibility(tileEntityLocation, canSee, currentTick);
+        }
+    }
+
+    private static void logAggregateReport(String aggregateReport) {
+        if (aggregateReport != null) {
+            Logger.info(aggregateReport, 4, SimpleEngine.class);
         }
     }
 }
