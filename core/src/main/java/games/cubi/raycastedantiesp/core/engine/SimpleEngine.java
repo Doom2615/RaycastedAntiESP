@@ -19,28 +19,26 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 
 public abstract class SimpleEngine implements Engine {
     private static final long SLOW_TICK_NANOS = 40 * 1_000_000L;
+    //Literally just magic numbers I made by keyboard mashing
+    private static final int TICK_IDLE = 1872;
+    private static final int TICK_PENDING = -129;
+    private static final int TICK_RUNNING = 34892;
 
     private final ConfigManager config;
     private final ParticleSpawner particleSpawner;
     private final IntSupplier currentTickSupplier;
     private final AtomicInteger tickThreadsRunning = new AtomicInteger(0);
     private final AtomicInteger runningTick = new AtomicInteger(-1);
-
-    //private final AtomicBoolean tickPendingOrRunning = new AtomicBoolean(false);
-
-    private final AtomicBoolean tickPending = new AtomicBoolean(false);
-    private final AtomicBoolean tickRunning = new AtomicBoolean(false);
+    private final AtomicInteger tickState = new AtomicInteger(TICK_IDLE);
     private final AtomicLong tickNanos = new AtomicLong(0);
     private final AsyncRunner asyncRunner;
-    private final TimingStats timingStats = new TimingStats();
-    private volatile boolean timingStatsWereEnabled = false;
+    private volatile TimingStats timingStats = TimingStatsNoOp.INSTANCE;
 
     public SimpleEngine(ConfigManager config, ParticleSpawner particleSpawner, IntSupplier currentTickSupplier, AsyncRunner asyncRunner) {
         this.config = config;
@@ -50,39 +48,38 @@ public abstract class SimpleEngine implements Engine {
     }
 
     /**
-     * Sets tickPending to true if both it and tickRunning are false, and returns true if it was able to set it to true. There is however a small possibility of this returning true incorrectly due to it not actually being atomic.
-     * @return true if it was able to set tickPending to true, false otherwise. If it returns false, the caller should not schedule a tick, as one is already pending or running.
+     * Reserves the next engine tick before it is handed to the async scheduler.
+     *
+     * @return true if the caller now owns the only pending tick slot; false if an existing pending
+     * or running tick should cover this attempt.
      */
     public boolean markTickRunning() {
-        // If tickRunning is true, we can't run a tick, so return false
-        if (tickRunning.get()) {
-            timingStats.recordSkipped(-1, System.nanoTime());
-            return false;
-        }
-
-        if (tickPending.compareAndSet(false, true)) {
+        if (tickState.compareAndSet(TICK_IDLE, TICK_PENDING)) {
             return true;
         }
-        timingStats.recordSkipped(-1, System.nanoTime());
+        recordSkippedTick(-1, System.nanoTime());
         return false;
     }
 
+    /**
+     * Runs the tick which was reserved using {@link #markTickRunning} and, if the engine falls behind the server clock, keeps the
+     * same worker on the latest tick instead of yielding back to the scheduler.
+     *
+     * @param scheduledTick the server tick captured before async handoff.
+     * @param scheduledNanos the time captured before async handoff, used to separate queue delay from engine work.
+     */
     @Override
     public void tick(int scheduledTick, long scheduledNanos) {
-        if (!tickPending.get()) {
-            // This means that this tick was dispatched but not marked as such, or was unmarked at some point.
-            Logger.warning("Tick " + scheduledTick + " was dispatched but not marked as pending. This suggests a race condition. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
-        }
         boolean runTick = true;
+        boolean expectPending = true;
         int startTick = currentTickSupplier.getAsInt();
         while (runTick) {
-            tickPending.set(false);
-            if (!tickRunning.compareAndSet(false, true)) {
-                // This means there is already a tick running, so we should exit
-                Logger.info("Tick " + scheduledTick + " is pending but another tick is already running. Exiting now.", 6, SimpleEngine.class);
+            if (!startTickState(scheduledTick, expectPending)) {
                 return;
             }
-            dispatchTick(scheduledTick, startTick, scheduledNanos);
+            if (!dispatchTick(scheduledTick, startTick, scheduledNanos)) {
+                return;
+            }
 
             int latestTick = currentTickSupplier.getAsInt();
             if (latestTick > startTick) {
@@ -92,44 +89,43 @@ public abstract class SimpleEngine implements Engine {
                 scheduledNanos = System.nanoTime();
                 scheduledTick = latestTick;
 
-                if (tickRunning.get()) {
+                if (tickState.get() == TICK_RUNNING) {
                     // This means that there is already a tick running, so we should exit
                     Logger.info("Tick finished behind but another thread had already begun ticking the next tick.", 5, SimpleEngine.class);
                     return;
                 }
+                expectPending = false; //Next call to startTickState should not expect to see status set to pending
             }
             else runTick = false;
         }
     }
 
-    private void dispatchTick(int scheduledTick, int startTick, long scheduledNanos) {
+    /**
+     * Claims worker capacity and either runs work immediately or schedules worker batches.
+     *
+     * @return true if at least one sub-tick worker accepted responsibility for completing the tick
+     * lifecycle; false if this attempt was skipped or cleaned up during setup.
+     */
+    private boolean dispatchTick(int scheduledTick, int startTick, long scheduledNanos) {
         int threads = config.getEngineConfig().simpleConfig().asyncProcessingThreads();
         if (threads < 1) threads = 1;
 
         DebugConfig debugConfig = config.getDebugConfig();
-        boolean recordTimings = debugConfig.recordTimings();
-        if (recordTimings) {
-            timingStatsWereEnabled = true;
-        } else if (timingStatsWereEnabled) {
-            // Timing stats were enabled last time but not anymore
-            timingStats.reset();
-            timingStatsWereEnabled = false;
-        }
+        TimingStats tickTimingStats = timingStats(debugConfig);
+        boolean recordTimings = tickTimingStats != TimingStatsNoOp.INSTANCE;
 
         long startNanos = System.nanoTime();
 
         int tickAlreadyRunning = runningTick.get();
         // First guard for the current tick already being processed (can happen if the previous tick ran overtime and thus didn't yield the thread)
         if (scheduledTick == tickAlreadyRunning) {
-            if (recordTimings) {
-                String aggregateReport = timingStats.recordSkipped(threads, startNanos);
-                logAggregateReport(aggregateReport);
-            }
+            logAggregateReport(tickTimingStats.recordSkipped(threads, startNanos));
             Logger.info("RaycastedAntiESP is already processing this tick; skipping duplicate same-tick attempt."
                     + " scheduledTick=" + scheduledTick
                     + " currentServerTick=" + startTick
                     + " currentRunningTick=" + tickAlreadyRunning, 6, SimpleEngine.class);
-            return;
+            finishTickState();
+            return false;
         }
 
         int runningThreads = tickThreadsRunning.compareAndExchange(0, threads);
@@ -142,20 +138,20 @@ public abstract class SimpleEngine implements Engine {
                     + " currentRunningTick=" + tickAlreadyRunning
                     + " runningThreads=" + runningThreads
                     + " timeSpentInQueue=" + TickTimingFormatter.formatMillis(queueNanos) + "ms", 5, SimpleEngine.class);
-            if (recordTimings) {
-                String aggregateReport = timingStats.recordSkipped(threads, startNanos);
-                logAggregateReport(aggregateReport);
-            }
-            return;
+            logAggregateReport(tickTimingStats.recordSkipped(threads, startNanos));
+            finishTickState();
+            return false;
         }
 
         TickTimings timings = null;
         boolean handedOffToSubTick = false;
+        boolean claimedRunningTick = false;
         try {
             tickNanos.set(startNanos);
 
             final int currentTick = startTick;
             runningTick.set(currentTick);
+            claimedRunningTick = true;
             Collection<PlayerData> allPlayers = PlayerRegistry.getInstance().getAllPlayerData();
 
             EntityConfig entityConfig = config.getEntityConfig();
@@ -178,8 +174,8 @@ public abstract class SimpleEngine implements Engine {
             // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
             if (threads == 1) {
                 handedOffToSubTick = true;
-                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, timings);
-                return;
+                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, timings, tickTimingStats);
+                return true;
             }
 
             List<List<PlayerData>> batches = new ArrayList<>(threads);
@@ -196,7 +192,7 @@ public abstract class SimpleEngine implements Engine {
             int scheduledBatches = 0;
             try {
                 for (List<PlayerData> batch : batches) {
-                    asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, tickTimings));
+                    asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, tickTimings, tickTimingStats));
                     scheduledBatches++;
                 }
                 handedOffToSubTick = true;
@@ -207,17 +203,28 @@ public abstract class SimpleEngine implements Engine {
                     handedOffToSubTick = scheduledBatches > 0;
                 }
             }
+            return handedOffToSubTick;
         }
         finally {
             if (!handedOffToSubTick) {
                 tickThreadsRunning.set(0);
-                finaliseTick(startTick);
+                if (claimedRunningTick) {
+                    finaliseTick(startTick);
+                } else {
+                    finishTickState();
+                }
                 Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
             }
         }
     }
 
-    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick, TickTimings timings) {
+    /**
+     * Processes one worker batch and lets the final batch publish timing data and release the tick reservation.
+     *
+     * @param timingStats the timing sink selected when this tick started, so config changes during
+     * worker execution do not split one tick across sinks.
+     */
+    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick, TickTimings timings, TimingStats timingStats) {
         TickTimingBatch batchTimings = timings == null ? TickTimingBatchNoOp.INSTANCE : new TickTimingBatch();
         long batchStartNanos = batchTimings.startBatch();
         try {
@@ -256,11 +263,49 @@ public abstract class SimpleEngine implements Engine {
         }
     }
 
+    /**
+     * Moves the reserved tick into the running state. Catch-up iterations may start from idle
+     * because they are created by the current worker instead of by the server tick event.
+     *
+     * @return true if this thread now owns the running state; false if another pending or running
+     * tick should take precedence.
+     */
+    private boolean startTickState(int scheduledTick, boolean expectPending) {
+        if (expectPending) {
+            if (tickState.compareAndSet(TICK_PENDING, TICK_RUNNING)) {
+                return true;
+            }
+            if (tickState.compareAndSet(TICK_IDLE, TICK_RUNNING)) {
+                // This means that this tick was dispatched but not marked as such, or was unmarked at some point.
+                Logger.warning("Tick " + scheduledTick + " was dispatched but not marked as pending. This suggests a race condition. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
+                return true;
+            }
+        } else if (tickState.compareAndSet(TICK_IDLE, TICK_RUNNING)) {
+            return true;
+        }
+
+        // This means there is already a tick pending or running, so we should exit.
+        recordSkippedTick(-1, System.nanoTime());
+        Logger.info("Tick " + scheduledTick + " is pending but another tick is already pending or running. Exiting now.", 6, SimpleEngine.class);
+        return false;
+    }
+
+    /**
+     * Releases ownership for the tick that completed, without clearing a newer running tick that
+     * may have already taken over.
+     */
     private void finaliseTick(int currentTick) {
         runningTick.compareAndSet(currentTick, -1);
-        if (!tickRunning.getAndSet(false)) {
+        finishTickState();
+    }
+
+    /**
+     * Returns the reservation state to idle after the active tick has stopped touching shared player visibility data.
+     */
+    private void finishTickState() {
+        if (!tickState.compareAndSet(TICK_RUNNING, TICK_IDLE)) {
             // This should never happen as it means the tick was marked as completed before processing was completed
-            Logger.warning("tickRunning was false when completing tick! This should never happen. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
+            Logger.warning("tickState was not running when completing tick! This should never happen. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
         }
     }
 
@@ -369,5 +414,40 @@ public abstract class SimpleEngine implements Engine {
         if (aggregateReport != null) {
             Logger.info(aggregateReport, 4, SimpleEngine.class);
         }
+    }
+
+    /**
+     * Counts a skipped tick against the currently configured timing sink.
+     */
+    private void recordSkippedTick(int threads, long nowNanos) {
+        logAggregateReport(timingStats().recordSkipped(threads, nowNanos));
+    }
+
+    /**
+     * Selects the timing sink from the current debug config.
+     *
+     * @return a collecting {@link TimingStats} while timing diagnostics are enabled, otherwise the
+     * no-op singleton.
+     */
+    private TimingStats timingStats() {
+        return timingStats(config.getDebugConfig());
+    }
+
+    /**
+     * Keeps disabled timing diagnostics allocation-free and starts a fresh collection window when
+     * diagnostics are re-enabled.
+     *
+     * @return the timing sink that should be used for a newly starting tick or skip record.
+     */
+    private TimingStats timingStats(DebugConfig debugConfig) {
+        if (!debugConfig.recordTimings()) {
+            timingStats = TimingStatsNoOp.INSTANCE;
+            return timingStats;
+        }
+
+        if (timingStats == TimingStatsNoOp.INSTANCE) {
+            timingStats = new TimingStats();
+        }
+        return timingStats;
     }
 }

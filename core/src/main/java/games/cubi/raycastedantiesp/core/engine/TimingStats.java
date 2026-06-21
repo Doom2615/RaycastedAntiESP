@@ -5,7 +5,7 @@ import it.unimi.dsi.fastutil.longs.LongComparators;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongList;
 
-final class TimingStats {
+public class TimingStats {
     private static final long REPORT_INTERVAL_NANOS = 30_000_000_000L;
 
     private final LongArrayList wallSamples = new LongArrayList();
@@ -27,6 +27,9 @@ final class TimingStats {
 
     private TickTimingSnapshot slowestTick = null;
 
+    /**
+     * Drops the current reporting window so later samples do not mix with data collected under a previous timing configuration.
+     */
     synchronized void reset() {
         wallSamples.clear();
         schedulerWaitSamples.clear();
@@ -45,6 +48,11 @@ final class TimingStats {
         slowestTick = null;
     }
 
+    /**
+     * Adds a completed tick to the active reporting window.
+     *
+     * @return a formatted aggregate report when the reporting interval has elapsed; otherwise null.
+     */
     synchronized String recordCompleted(TickTimingSnapshot snapshot, long nowNanos) {
         ensureInterval(nowNanos);
         completedTicks++;
@@ -66,6 +74,11 @@ final class TimingStats {
         return reportIfDue(nowNanos);
     }
 
+    /**
+     * Adds a skipped tick attempt to the active reporting window without creating worker timing samples.
+     *
+     * @return a formatted aggregate report when the reporting interval has elapsed; otherwise null.
+     */
     synchronized String recordSkipped(int threads, long nowNanos) {
         ensureInterval(nowNanos);
         skippedTicks++;
