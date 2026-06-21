@@ -17,7 +17,9 @@ import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcesso
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsEntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
+import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsBlockViewController;
+import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsEntityViewController;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.paper.bStats.MetricsCollector;
@@ -89,6 +91,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
             currentTickSupplier = new PaperTicker();
         }
         ViewRegistry.initialise(PacketEventsBlockView::new, PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
+        PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
         new PaperPacketEventsBlockViewController(currentTickSupplier);
 
