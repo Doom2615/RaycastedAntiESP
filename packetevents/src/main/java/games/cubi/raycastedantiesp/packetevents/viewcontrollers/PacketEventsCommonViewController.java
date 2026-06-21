@@ -4,6 +4,8 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
+import games.cubi.locatables.Locatable;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -32,6 +34,19 @@ public abstract class PacketEventsCommonViewController {
     public abstract UUID resolveWorldUUID(User user);
 
     public abstract UUID resolveWorldUUID(String worldName);
+
+    public UUID resolvePacketWorld(PlayerData playerData, User user) {
+        String trackedWorldName = playerData.nettyData().getCurrentWorldName();
+        if (trackedWorldName != null) {
+            return resolveWorldUUID(trackedWorldName);
+        }
+
+        Locatable ownLocation = playerData.ownLocation();
+        if (ownLocation != null && ownLocation.world() != null) {
+            return ownLocation.world();
+        }
+        return resolveWorldUUID(user);
+    }
 
     public void writeIfPresent(User viewer, PacketWrapper<?> packet) {
         if (viewer == null || packet == null) {

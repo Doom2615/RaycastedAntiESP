@@ -4,7 +4,6 @@ import com.github.retrooper.packetevents.protocol.player.User;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMaps;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
@@ -12,13 +11,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntSupplier;
 
 public final class PaperPacketEventsCommonViewController extends PacketEventsCommonViewController implements Listener {
-    /**NEVER mutate this map. For thread-safety, copy-on-write must be used**/
+    /** NEVER mutate a published map instance; replace it with a copied map. **/
     private volatile Object2ObjectArrayMap<String, UUID> worldIdByWorldName = new Object2ObjectArrayMap<>();
 
     public PaperPacketEventsCommonViewController(IntSupplier currentTickSupplier) {

@@ -18,12 +18,10 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.Equipment;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.teleport.RelativeFlag;
-import com.github.retrooper.packetevents.protocol.world.dimension.DimensionType;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
-import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -64,8 +62,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         COMMON = PacketEventsCommonViewController.get(currentTickSupplier);
     }
 
-    protected abstract UUID resolveWorldUUID(User user);
-
     public void removeViewer(UUID viewerUUID) {
     }
 
@@ -85,7 +81,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);
-            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, CURRENT_TICK_SUPPLIER.getAsInt());
+            int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
+            handleWorldStatePacket(viewerUUID, packet.getWorldName(), packet.getDimensionType().getMinY(), currentTick);
+            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTick);
         }
 
         if (playerData == null) {
@@ -102,8 +100,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             hideOnSpawnPlayerDistanceSquared = playerConfig.hideOnSpawnDistance() * playerConfig.hideOnSpawnDistance();
         }
 
-        Locatable ownLocation = playerData.ownLocation();
-        UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
+        UUID world = COMMON.resolvePacketWorld(playerData, event.getUser());
         int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
 
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
@@ -227,13 +224,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             case PacketType.Play.Server.RESPAWN -> {
                 WrapperPlayServerRespawn packet = new WrapperPlayServerRespawn(event);
-                handleRespawnPacket(viewer.getUUID(), getWorld(packet.getDimensionType()), packet.getDimensionType().getMinY(), currentTick);
+                handleWorldStatePacket(viewer.getUUID(), packet.getWorldName().orElse(null), packet.getDimensionType().getMinY(), currentTick);
             }
             default -> {}
         }
     }
-
-    protected abstract String getWorld(DimensionType dimensionType);
 
     protected NettyEntityLocatable<?,?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID) {
         return PacketEventsEntity.createSelfEntity(ownData, entityID, playerUUID);
