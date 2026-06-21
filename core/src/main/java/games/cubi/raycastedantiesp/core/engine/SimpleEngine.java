@@ -62,6 +62,16 @@ public abstract class SimpleEngine implements Engine {
     }
 
     /**
+     * Releases a pending tick reservation when async scheduling fails before {@link #tick(int, long)}
+     * can claim it.
+     */
+    public void cancelPendingTickReservation() {
+        if (!tickState.compareAndSet(TICK_PENDING, TICK_IDLE)) {
+            Logger.warning("Attempted to cancel a pending tick reservation, but the tick was no longer pending.", 5, SimpleEngine.class);
+        }
+    }
+
+    /**
      * Runs the tick which was reserved using {@link #markTickRunning} and, if the engine falls behind the server clock, keeps the
      * same worker on the latest tick instead of yielding back to the scheduler.
      *
