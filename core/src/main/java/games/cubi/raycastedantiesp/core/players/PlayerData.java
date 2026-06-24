@@ -90,6 +90,9 @@ public class PlayerData {
     }
 
     public NettyEntityLocatable<?,?> entityFromID(int entityID) {
+        if (nettyData.isSelfEntityID(entityID)) {
+            return nettyData.getSelfEntity();
+        }
         EntityView<?> entityView = viewFromEntityID(entityID);
         if (entityView == null) {
             return null;

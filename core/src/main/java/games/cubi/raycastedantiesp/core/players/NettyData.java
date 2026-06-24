@@ -9,6 +9,7 @@
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.*;
 import games.cubi.raycastedantiesp.core.utils.Packet.Packets;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -27,6 +28,7 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
  */
 public class NettyData implements Clearable {
     private static final int DEFAULT_MAP_SIZE = 16;
+    public static final int NO_SELF_ENTITY_ID = -1;
     //
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Leash tracking:
@@ -246,6 +248,66 @@ public class NettyData implements Clearable {
 
     //
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START Self entity tracking:
+    //
+    private NettyEntityLocatable<?, ?> selfEntity;
+    private int selfEntityID = NO_SELF_ENTITY_ID;
+
+    public NettyEntityLocatable<?, ?> getSelfEntity() {
+        return selfEntity;
+    }
+
+    public NettyData setSelfEntity(NettyEntityLocatable<?, ?> selfEntity) {
+        if (this.selfEntity != null && this.selfEntity != selfEntity) {
+            this.selfEntity.clear();
+        }
+        this.selfEntity = selfEntity;
+        selfEntityID = selfEntity == null ? NO_SELF_ENTITY_ID : selfEntity.entityID();
+        return this;
+    }
+
+    public int getSelfEntityID() {
+        return selfEntityID;
+    }
+
+    public boolean isSelfEntityID(int entityID) {
+        return selfEntityID != NO_SELF_ENTITY_ID && entityID == selfEntityID;
+    }
+    //
+    // END Self entity tracking.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START World-transition destroy tracking:
+    //
+    private int @IntArrayListMarker [] expectedWorldTransitionDestroyEntityIDs;
+
+    /**
+     * When changing worlds, the server sends destroy packets for all the entities in the old world, but we want to clear the view. Tracking them here allows those destroy packets to be handled correctly.
+     */
+    public void setExpectedWorldTransitionDestroyEntityIDs(int[] expectedEntityIDs) {
+        expectedWorldTransitionDestroyEntityIDs = PrimitiveIntArrayList.isEmpty(expectedEntityIDs) ? null : expectedEntityIDs.clone();
+    }
+
+    public boolean consumeExpectedWorldTransitionDestroyEntityID(int entityID) {
+        if (!PrimitiveIntArrayList.contains(expectedWorldTransitionDestroyEntityIDs, entityID)) {
+            return false;
+        }
+        expectedWorldTransitionDestroyEntityIDs = PrimitiveIntArrayList.remove(expectedWorldTransitionDestroyEntityIDs, entityID);
+        if (PrimitiveIntArrayList.isEmpty(expectedWorldTransitionDestroyEntityIDs)) {
+            expectedWorldTransitionDestroyEntityIDs = null;
+        }
+        return true;
+    }
+    //
+    // END World-transition destroy tracking.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START World tracking:
     //
 
@@ -283,11 +345,24 @@ public class NettyData implements Clearable {
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //
 
-    @Override
-    public void clear() {
+    public void clearPendingReconciliationState() {
         unresolvedLeashedEntityIDsByHolderID.clear();
         unresolvedPassengerIDsByVehicleID.clear();
         unresolvedVehicleIDsByPassengerID.clear();
         pendingPostEntitySpawnTasksByEntityID.clear();
+        evictPendingPostSpawnTasksOnNextPacket = false;
+    }
+
+    @Override
+    public void clear() {
+        clearPendingReconciliationState();
+        expectedWorldTransitionDestroyEntityIDs = null;
+        if (selfEntity != null) {
+            selfEntity.clear();
+        }
+        selfEntity = null;
+        selfEntityID = NO_SELF_ENTITY_ID;
+        currentWorldMinHeight = Integer.MIN_VALUE;
+        currentWorldName = null;
     }
 }
