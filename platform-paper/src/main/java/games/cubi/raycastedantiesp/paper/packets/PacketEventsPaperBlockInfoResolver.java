@@ -1,4 +1,4 @@
-package games.cubi.raycastedantiesp.paper.staging;
+package games.cubi.raycastedantiesp.paper.packets;
 
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import games.cubi.logs.Logger;

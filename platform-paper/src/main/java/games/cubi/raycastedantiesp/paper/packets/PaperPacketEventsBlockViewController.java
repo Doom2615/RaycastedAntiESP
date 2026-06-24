@@ -3,7 +3,6 @@ package games.cubi.raycastedantiesp.paper.packets;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsBlockViewController;
-import games.cubi.raycastedantiesp.paper.staging.PacketEventsPaperBlockInfoResolver;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.bukkit.Material;
 

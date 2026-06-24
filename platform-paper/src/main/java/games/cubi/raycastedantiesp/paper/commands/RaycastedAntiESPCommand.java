@@ -22,7 +22,7 @@ import games.cubi.raycastedantiesp.core.raycast.RaycastUtil;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import games.cubi.raycastedantiesp.paper.UpdateChecker;
-import games.cubi.raycastedantiesp.paper.staging.PacketEventsPaperBlockInfoResolver;
+import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
 
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import net.kyori.adventure.text.minimessage.MiniMessage;
