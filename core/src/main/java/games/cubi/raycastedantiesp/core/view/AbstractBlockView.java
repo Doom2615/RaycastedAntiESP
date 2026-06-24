@@ -107,7 +107,7 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
     public Collection<BlockLocatable> getNeedingRecheck(int recheckTicks, int currentTick) {
         List<BlockLocatable> needingRecheck = new ArrayList<>();
         for (T tileEntity : knownTileEntities.values()) {
-            if (tileEntity.visible() && currentTick - tileEntity.lastChecked() < recheckTicks) {
+            if (tileEntity.visible() && (recheckTicks < 0 || currentTick - tileEntity.lastChecked() < recheckTicks)) {
                 continue;
             }
             needingRecheck.add(tileEntity);

@@ -141,7 +141,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     public Collection<UUID> getNeedingRecheck(int recheckTicks, int currentTick) {
         List<UUID> needingRecheck = new ArrayList<>();
         for (PacketEventsEntity state : entitiesByUUID.values()) {
-            if (state.visible() && (currentTick - state.lastChecked()) < recheckTicks) {
+            if (state.visible() && (recheckTicks < 0 || currentTick - state.lastChecked() < recheckTicks)) {
                 continue;
             }
             needingRecheck.add(state.entityUUID());
