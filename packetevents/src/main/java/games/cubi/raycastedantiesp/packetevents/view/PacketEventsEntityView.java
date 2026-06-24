@@ -35,8 +35,24 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
             Logger.error(new RuntimeException("Attempted to insert null entity or entity with null UUID into EntityView"), 2, PacketEventsEntityView.class);
             return;
         }
-        entitiesByUUID.put(entity.entityUUID(), entity);
-        entityUUIDsByID.put(entity.entityID(), entity.entityUUID());
+
+        UUID entityUUID = entity.entityUUID();
+        int entityID = entity.entityID();
+        UUID previousUUIDForID = entityUUIDsByID.put(entityID, entityUUID);
+        if (previousUUIDForID != null && !previousUUIDForID.equals(entityUUID)) {
+            PacketEventsEntity previousEntityForID = entitiesByUUID.get(previousUUIDForID);
+            if (previousEntityForID != null && previousEntityForID.entityID() == entityID && entitiesByUUID.remove(previousUUIDForID, previousEntityForID)) {
+                previousEntityForID.clear();
+            }
+        }
+
+        PacketEventsEntity previousEntityForUUID = entitiesByUUID.put(entityUUID, entity);
+        if (previousEntityForUUID != null && previousEntityForUUID.entityID() != entityID) {
+            entityUUIDsByID.remove(previousEntityForUUID.entityID(), entityUUID);
+        }
+        if (previousEntityForUUID != null && previousEntityForUUID != entity) {
+            previousEntityForUUID.clear();
+        }
     }
 
     @Override
