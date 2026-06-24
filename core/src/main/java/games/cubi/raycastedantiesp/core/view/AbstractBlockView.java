@@ -12,6 +12,7 @@ import games.cubi.raycastedantiesp.core.utils.ConcurrentSelfMap;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 
 public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implements BlockView {
     public static final int CHUNK_SIZE = 16;
@@ -104,15 +105,16 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
     }
 
     @Override
-    public Collection<BlockLocatable> getNeedingRecheck(int recheckTicks, int currentTick) {
-        List<BlockLocatable> needingRecheck = new ArrayList<>();
+    public int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<BlockLocatable> action) {
+        int processed = 0;
         for (T tileEntity : knownTileEntities.values()) {
             if (tileEntity.visible() && (recheckTicks < 0 || currentTick - tileEntity.lastChecked() < recheckTicks)) {
                 continue;
             }
-            needingRecheck.add(tileEntity);
+            action.accept(tileEntity);
+            processed++;
         }
-        return needingRecheck;
+        return processed;
     }
 
     @Override

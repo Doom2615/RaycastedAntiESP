@@ -9,6 +9,7 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public interface BlockView extends Clearable {
     boolean isBlockOccluding(BlockLocatable location);
@@ -30,7 +31,12 @@ public interface BlockView extends Clearable {
 
     Collection<BlockLocatable> getKnownTileEntities();
 
-    Collection<BlockLocatable> getNeedingRecheck(int recheckTicks, int currentTick);
+    /**
+     * Iterates currently tracked tile entities that should be visibility-checked.
+     *
+     * @return number of tile entities passed to {@code action}.
+     */
+    int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<BlockLocatable> action);
 
     boolean hasPendingTransitions();
 

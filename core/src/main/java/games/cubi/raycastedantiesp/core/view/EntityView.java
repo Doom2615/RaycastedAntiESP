@@ -7,6 +7,7 @@ import games.cubi.raycastedantiesp.core.utils.Clearable;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable {
     void insertEntity(T entity);
@@ -38,7 +39,12 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
 
     Collection<UUID> getKnownEntities();
 
-    Collection<UUID> getNeedingRecheck(int recheckTicks, int currentTick);
+    /**
+     * Iterates currently tracked entities that should be visibility-checked.
+     *
+     * @return number of entities passed to {@code action}.
+     */
+    int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<UUID> action);
 
     boolean hasPendingTransitions();
 
