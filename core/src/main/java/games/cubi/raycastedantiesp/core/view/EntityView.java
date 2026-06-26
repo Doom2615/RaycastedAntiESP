@@ -37,6 +37,8 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
 
     void setVisibility(UUID entityUUID, boolean visible, int currentTick);
 
+    void setVisibility(NettyEntityLocatable<?,?> entity, boolean visible, int currentTick);
+
     Collection<UUID> getKnownEntities();
 
     /**

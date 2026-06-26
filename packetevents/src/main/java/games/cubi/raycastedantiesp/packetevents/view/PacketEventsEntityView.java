@@ -130,23 +130,28 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public void setVisibility(UUID entityUUID, boolean visible, int currentTick) {
-        PacketEventsEntity existing = entitiesByUUID.get(entityUUID);
-        if (existing == null) {
+        PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
+        if (entity == null) {
             Logger.debug("EntityView.setVisibility missing uuid=" + entityUUID
                     + " requestedVisible=" + visible
                     + " tick=" + currentTick);
             return;
         }
-        if (existing.isSelfEntity()) return;
-        if (existing.visible() != visible) {
+        if (entity.isSelfEntity()) return;
+        setVisibility(entity, visible, currentTick);
+    }
+
+    @Override
+    public void setVisibility(@NotNull NettyEntityLocatable<?,?> entity, boolean visible, int currentTick) {
+        if (entity.visible() != visible) {
             transitions.add(new EntityViewTransition(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
-                    existing.entityUUID(),
-                    existing.entityID()
+                    entity.entityUUID(),
+                    entity.entityID()
             ));
         }
-        existing.setVisible(visible);
-        existing.setLastChecked(currentTick);
+        entity.setVisible(visible);
+        entity.setLastChecked(currentTick);
     }
 
     @Override
