@@ -243,30 +243,44 @@ public abstract class PacketEntityViewController<P> {
             playerData.nettyData().setUnresolvedPassengers(entityID, passengers);
             return false;
         }
-        return handleEntityPassengersNow(vehicle, passengers, playerData);
+        return handleEntityPassengersNow(vehicle, passengers, playerData, currentTick);
     }
 
     //This (and leash handling) leaks some info to the client, as it will receive the passenger packet even if the passengers are auto-hidden once parsed, but as the packet doesn't include any location or type info, this shouldn't be too incriminating.
-    boolean handleEntityPassengersNow(NettyEntityLocatable<?,?> entity, int[] passengers, PlayerData playerData) {
+    boolean handleEntityPassengersNow(NettyEntityLocatable<?,?> entity, int[] passengers, PlayerData playerData, int currentTick) {
         int entityID = entity.entityID();
         entity.setPassengerIDs(passengers);
         int[] unresolvedPassengers = null;
+        boolean selfIsPassenger = false;
         for (int passengerID : passengers) {
             NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
             if (passenger == null) {
                 unresolvedPassengers = PrimitiveIntArrayList.add(unresolvedPassengers, passengerID);
                 continue;
             }
+            if (passenger.isSelfEntity()) {
+                selfIsPassenger = true;
+            }
             passenger.setVehicleID(entityID);
         }
         playerData.nettyData().setUnresolvedPassengers(entityID, unresolvedPassengers);
         checkVehicle(entity, playerData);
+        boolean cancelForForcedVehicleShow = selfIsPassenger && forceVisibleBecauseAttachedToSelf(entity, playerData, currentTick, "self-passenger vehicle");
+        if (cancelForForcedVehicleShow) {
+            return true;
+        }
         if (cancelIfEnabledAndHidden(entityID, playerData)) return true;
         boolean passengersNotVisible = false;
         IntArrayList visiblePassengers = new IntArrayList(passengers.length);
         for (int passengerID : passengers) {
             NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
             if (passenger == null) {
+                visiblePassengers.add(passengerID);
+            }
+            else if (entity.isSelfEntity() && forceVisibleBecauseAttachedToSelf(passenger, playerData, currentTick, "self-vehicle passenger")) {
+                passengersNotVisible = true;
+            }
+            else if (entity.isSelfEntity() || passenger.isSelfEntity()) {
                 visiblePassengers.add(passengerID);
             }
             else if (cancelIfEnabledAndHidden(passenger, playerData)) {
@@ -426,15 +440,18 @@ public abstract class PacketEntityViewController<P> {
      */
     @Packet(Packet.Packets.LEASH_ENTITY)
     protected boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int currentTick) {
+        if (playerData.nettyData().isSelfEntityID(leashedEntity) && playerData.nettyData().isSelfEntityID(leashingEntity)) {
+            return false;
+        }
         NettyEntityLocatable<?,?> leashed = playerData.entityFromID(leashedEntity);
         if (leashed == null) {
             playerData.nettyData().addPostEntitySpawnTask(leashedEntity, new LeashReconciliationTask(playerData, leashedEntity, leashingEntity, currentTick));
             return false;
         }
-        return handleLeashEntityNow(leashed, leashingEntity, playerData);
+        return handleLeashEntityNow(leashed, leashingEntity, playerData, currentTick);
     }
 
-    boolean handleLeashEntityNow(NettyEntityLocatable<?,?> leashedEntity, int leashingEntity, PlayerData playerData) {
+    boolean handleLeashEntityNow(NettyEntityLocatable<?,?> leashedEntity, int leashingEntity, PlayerData playerData, int currentTick) {
         //Note, leashing entity ID will be -1 to unleash. From testing it sometimes seems to be 0?
         removeExistingLeashReference(leashedEntity.entityID(), leashedEntity, playerData);
         if (leashingEntity == -1 || leashingEntity == 0) {
@@ -454,9 +471,26 @@ public abstract class PacketEntityViewController<P> {
             }
             else {
                 leashing.addLeashedEntity(leashedEntity.entityID());
+                if (leashing.isSelfEntity()) {
+                    return forceVisibleBecauseAttachedToSelf(leashedEntity, playerData, currentTick, "self-held leash"); // This schedules a visibility update, which repairs leash state, so suppressing the packet avoids sending it twice (and before the client is aware of the entity)
+                }
                 return cancelIfEnabledAndHidden(leashedEntity, playerData) || cancelIfEnabledAndHidden(leashingEntity, playerData);
             }
         }
+    }
+
+    private boolean forceVisibleBecauseAttachedToSelf(NettyEntityLocatable<?,?> entity, PlayerData self, int currentTick, String reason) {
+        if (entity.isSelfEntity()) {
+            return false;
+        }
+        boolean wasClientVisible = entity.clientVisible();
+        EntityView<?> view = self.viewFromEntityID(entity.entityID());
+        if (view == null) {
+            Logger.warning("Could not find owning view while forcing self-attached entity visible, id=" + entity.entityID() + " player=" + self.getPlayerUUID() + " reason=" + reason, 4, PacketEntityViewController.class);
+            return false;
+        }
+        view.setVisibility(entity.entityUUID(), true, currentTick);
+        return !wasClientVisible;
     }
 
     private void removeExistingLeashReference(int leashedEntityID, NettyEntityLocatable<?,?> leashed, PlayerData playerData) {
@@ -487,6 +521,9 @@ public abstract class PacketEntityViewController<P> {
      * @return True if the packet should be suppressed
      */
     protected boolean cancelIfEnabledAndHidden(int entityID, PlayerData playerData) {
+        if (playerData.nettyData().isSelfEntityID(entityID)) {
+            return false;
+        }
         EntityView<?> entityView = playerData.viewFromEntityID(entityID);
 
         if (entityView == null) {
@@ -505,6 +542,9 @@ public abstract class PacketEntityViewController<P> {
      * @return True if the packet should be suppressed
      */
     protected boolean cancelIfEnabledAndHidden(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
+        if (entity.isSelfEntity()) {
+            return false;
+        }
         if (entity.visible()) {
             return false;
         }
@@ -521,7 +561,7 @@ public abstract class PacketEntityViewController<P> {
         int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengers(insertedEntity.entityID());
         if (!PrimitiveIntArrayList.isEmpty(pendingPassengers)) {
             playerData.nettyData().consumeUnresolvedPassengers(insertedEntity.entityID());
-            handleEntityPassengersNow(insertedEntity, pendingPassengers, playerData);
+            handleEntityPassengersNow(insertedEntity, pendingPassengers, playerData, insertedEntity.lastChecked());
             resendPassengerStateIfClientVisible(insertedEntity, playerData);
         }
 
@@ -535,6 +575,9 @@ public abstract class PacketEntityViewController<P> {
         }
         insertedEntity.setVehicleID(unresolvedVehicleID);
         playerData.nettyData().removeUnresolvedPassengerLink(insertedEntity.entityID(), unresolvedVehicleID);
+        if (vehicle.isSelfEntity() && forceVisibleBecauseAttachedToSelf(insertedEntity, playerData, insertedEntity.lastChecked(), "self-vehicle unresolved passenger")) {
+            return;
+        }
         resendPassengerStateIfClientVisible(vehicle, playerData);
     }
 

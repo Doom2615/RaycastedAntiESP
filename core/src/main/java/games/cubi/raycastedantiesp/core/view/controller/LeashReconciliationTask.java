@@ -24,7 +24,7 @@ final class LeashReconciliationTask extends BaseEntitySpawnTask {
             Logger.error("Reconciliation fail: Attempted to reconcile leash for unknown leashed entity, leashedEntityId=" + leashedEntityID, 3, this.getClass());
             return;
         }
-        PacketEntityViewController.get().handleLeashEntityNow(leashed, leashingEntityID, playerData);
+        PacketEntityViewController.get().handleLeashEntityNow(leashed, leashingEntityID, playerData, submittedTick); //submittedTick isn't the right tick to use here, but it's for a rare error case and as long as the tick is in the past it should be fine.
     }
 
     @Override
