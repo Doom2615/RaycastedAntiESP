@@ -2,6 +2,7 @@ package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.raycastedantiesp.core.locatables.EntityLocatable;
 import games.cubi.locatables.Locatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 import java.util.Collection;
@@ -13,6 +14,8 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
     void insertEntity(T entity);
 
     void removeEntity(int entityID, int currentTick);
+
+    void removeEntity(int entityID);
 
     void removeEntity(UUID entityUUID, int currentTick);
 
@@ -40,6 +43,8 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
     void setVisibility(NettyEntityLocatable<?,?> entity, boolean visible, int currentTick);
 
     Collection<UUID> getKnownEntities();
+
+    int[] getKnownEntityIDs();
 
     /**
      * Iterates currently tracked entities that should be visibility-checked.

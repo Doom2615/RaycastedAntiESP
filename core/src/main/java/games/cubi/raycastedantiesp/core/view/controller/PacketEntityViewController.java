@@ -14,6 +14,7 @@ import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.RaycastConfig;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.players.NettyData;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
@@ -21,7 +22,6 @@ import games.cubi.raycastedantiesp.core.utils.Packet;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
-import java.util.ArrayList;
 import java.util.UUID;
 
 import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_LEASHER;
@@ -63,23 +63,26 @@ public abstract class PacketEntityViewController<P> {
             return;
         }
 
-        String previousWorld = playerData.nettyData().getCurrentWorldName();
+        NettyData nettyData = playerData.nettyData();
+        String previousWorld = nettyData.getCurrentWorldName();
         if (world.equals(previousWorld)) {
-            playerData.nettyData().setCurrentWorldMinHeight(minWorldHeight);
+            nettyData.setCurrentWorldMinHeight(minWorldHeight);
             return;
         }
 
         if (previousWorld != null) {
-            // Not clearing player or entity views because it seems like the server sends destroy packets for them
+            nettyData.setExpectedWorldTransitionDestroyEntityIDs(drainRemainingEntityIDs(playerData));
             playerData.blockView().clear();
-            playerData.nettyData().clear();
+            playerData.entityView().clear();
+            playerData.playerView().clear();
+            nettyData.clearPendingReconciliationState();
         }
-        playerData.nettyData().setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
+        nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
     }
 
     protected void handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(playerUUID);
-        playerData.playerView().insertEntity(createSelfEntity(playerData, entityID, playerUUID).cast());
+        playerData.nettyData().setSelfEntity(Logger.requireNonNull(createSelfEntity(playerData, entityID, playerUUID), "createSelfEntity returned null", 3, PacketEntityViewController.class));
     }
 
     protected PlayerData handleLoginPhaseLoginPacket(UUID playerUUID, int currentTick) {
@@ -104,7 +107,7 @@ public abstract class PacketEntityViewController<P> {
             return false;
         }
 
-        NettyEntityLocatable<?,?> entity = processEntitySpawn(playerData, packet, world, currentTick);
+        NettyEntityLocatable<?,?> entity = Logger.requireNonNull(processEntitySpawn(playerData, packet, world, currentTick), "processEntitySpawn returned null", 3, PacketEntityViewController.class);
 
         if ((!isPlayer && entityConfig.enabled()) || isPlayer && playerConfig.enabled()) {
             Locatable ownLocation = playerData.ownLocation();
@@ -323,18 +326,32 @@ public abstract class PacketEntityViewController<P> {
 
     protected void handleDestroyEntities(int[] entityIDs, PlayerData playerData, int currentTick) {
         for (int entityID : entityIDs) {
+            if (playerData.nettyData().consumeExpectedWorldTransitionDestroyEntityID(entityID)) {
+                playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
+                playerData.entityView().removeEntity(entityID);
+                playerData.playerView().removeEntity(entityID); // If not present, this fails silently, so no need to check for correct view first.
+                continue;
+            }
             clearPassengerReferencesForDestroyedEntity(entityID, playerData);
             clearPendingHolderReference(entityID, playerData);
             playerData.nettyData().removeUnresolvedLeashedEntityFromAll(entityID);
             playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
-            EntityView<?> entityView = playerData.viewFromEntityID(entityID);
-            if (entityView == null) {
-                Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEntityViewController.class);
-                continue;
-            }
+            EntityView<?> view = playerData.viewFromEntityID(entityID);
+            if (view == null) continue;
             Logger.debug("Removing entity from view due to destroy packet, entityID=" + entityID + " player=" + playerData.getPlayerUUID() + " tick=" + currentTick);
-            entityView.removeEntity(entityID, currentTick);
+            view.removeEntity(entityID, currentTick);
         }
+    }
+
+    private int[] drainRemainingEntityIDs(PlayerData playerData) {
+        int[] entityIDs = playerData.entityView().getKnownEntityIDs();
+        int[] playerEntityIDs = playerData.playerView().getKnownEntityIDs();
+        int[] remainingEntityIDs = new int[entityIDs.length + playerEntityIDs.length];
+        int offset = 0;
+        System.arraycopy(entityIDs, 0, remainingEntityIDs, offset, entityIDs.length);
+        offset += entityIDs.length;
+        System.arraycopy(playerEntityIDs, 0, remainingEntityIDs, offset, playerEntityIDs.length);
+        return remainingEntityIDs;
     }
 
     private void clearPassengerReferencesForDestroyedEntity(int entityID, PlayerData playerData) {
@@ -544,7 +561,7 @@ public abstract class PacketEntityViewController<P> {
     }
 
     /**
-     * @return The created entity, with a default visibility of <code>true</code>. Does not insert the entity into any views, that is the responsibility of the caller.
+     * @return The created entity, with a default visibility of <code>true</code>. Must not return null. Does not insert the entity into any views, that is the responsibility of the caller.
      */
     protected abstract NettyEntityLocatable<?,?> processEntitySpawn(PlayerData playerData, P packet, UUID world, int currentTick);
 

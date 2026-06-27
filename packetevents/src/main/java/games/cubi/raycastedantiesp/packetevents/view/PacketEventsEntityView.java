@@ -2,9 +2,11 @@ package games.cubi.raycastedantiesp.packetevents.view;
 
 import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,6 +59,11 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public void removeEntity(int entityID, int currentTick) {
+        removeEntity(entityID);
+    }
+
+    @Override
+    public void removeEntity(int entityID) {
         UUID entityUUID = entityUUIDsByID.remove(entityID);
         if (entityUUID == null) {
             return;
@@ -157,6 +164,11 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     @Override
     public Collection<UUID> getKnownEntities() {
         return List.copyOf(entitiesByUUID.keySet());
+    }
+
+    @Override
+    public int[] getKnownEntityIDs() {
+        return entityUUIDsByID.keySet().stream().mapToInt(Integer::intValue).toArray();
     }
 
     @Override
