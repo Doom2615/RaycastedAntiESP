@@ -106,11 +106,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
 
         if (playerData.entityView().hasPendingTransitions()) {
-            processEntityTransitions(viewerUUID, event.getUser(), cast(playerData.entityView()));
+            processEntityTransitions(playerData, event.getUser(), cast(playerData.entityView()));
         }
 
         if (playerData.playerView().hasPendingTransitions()) {
-            processEntityTransitions(viewerUUID, event.getUser(), cast(playerData.playerView()));
+            processEntityTransitions(playerData, event.getUser(), cast(playerData.playerView()));
         }
         
         playerData.nettyData().evictPendingPostSpawnTasksIfRequired(currentTick);
@@ -402,7 +402,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return entity;
     }
 
-    private void processEntityTransitions(UUID viewerUUID, User viewer, EntityView<PacketEventsEntity> entityView) {
+    private void processEntityTransitions(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView) {
         for (EntityViewTransition transition : entityView.drainTransitions()) {
             PacketEventsEntity entity = getTrackedEntity(entityView, transition.targetUUID());
 
@@ -415,14 +415,14 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 }
                 case SHOW -> {
                     if (entity == null || entity.isSelfEntity()) {
-                        Logger.warning("PacketEvents.processEntityTransitions show-skipped viewer=" + viewerUUID
+                        Logger.warning("PacketEvents.processEntityTransitions show-skipped viewer=" + data.getPlayerUUID()
                                 + " target=" + transition.targetUUID()
                                 + " reason="
                                 + (entity == null ? "missing-entity" : "self-entity"), 2, PacketEventsEntityViewController.class);
                         continue;
                     }
                     PacketEventsEntityReplayData replayData = ensureReplayData(entity);
-                    sendEntityShow(viewer, PlayerRegistry.getInstance().getPlayerData(viewerUUID), entity, replayData);
+                    sendEntityShow(viewer, data, entity, replayData);
                     entity.setClientVisible(true);
                 }
             }
