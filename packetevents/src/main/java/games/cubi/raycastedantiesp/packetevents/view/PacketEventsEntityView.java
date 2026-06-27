@@ -104,8 +104,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public boolean isVisible(int entityID) {
-        PacketEventsEntity entity = getTrackedEntity(entityID);
-        assert entity != null;
+        PacketEventsEntity entity = Logger.requireNonNull(getTrackedEntity(entityID), "Entity with ID " + entityID + " does not exist in EntityView", 3, PacketEventsEntityView.class);
         return entity.visible();
     }
 
