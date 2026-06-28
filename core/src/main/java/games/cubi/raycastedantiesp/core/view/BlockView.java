@@ -1,5 +1,6 @@
 package games.cubi.raycastedantiesp.core.view;
 
+import ca.spottedleaf.common.function.BiBooleanObjectConsumer;
 import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
@@ -37,6 +38,22 @@ public interface BlockView extends Clearable {
      * @return number of tile entities passed to {@code action}.
      */
     int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<BlockLocatable> action);
+
+    @FunctionalInterface
+    interface VisibilityResolver {
+        byte SKIPPED = 78;
+        byte HIDE = -23;
+        byte SHOW = 42;
+
+        byte setVisible(BlockLocatable location);
+    }
+
+    /**
+     * Iterates currently tracked tile entities that should be visibility-checked.
+     *
+     * @return number of tile entities passed to {@code action}.
+     */
+    int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, VisibilityResolver action);
 
     boolean hasPendingTransitions();
 

@@ -12,7 +12,6 @@ import games.cubi.raycastedantiesp.core.utils.ConcurrentSelfMap;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implements BlockView {
@@ -90,14 +89,18 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
         if (existing == null) {
             return;
         }
-        if (existing.visible() != visible) {
+        setVisibility(existing, existing.visible(), visible, currentTick);
+    }
+
+    public void setVisibility(T tileEntity, boolean currentVisibility, boolean shouldBeVisible, int currentTick) {
+        if (currentVisibility != shouldBeVisible) {
             transitions.add(new BlockViewTransition(
-                    visible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE,
-                    location
+                    shouldBeVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE,
+                    tileEntity
             ));
         }
-        existing.setVisible(visible);
-        existing.setLastChecked(currentTick);
+        tileEntity.setVisible(shouldBeVisible);
+        tileEntity.setLastChecked(currentTick);
     }
 
     @Override
@@ -113,6 +116,23 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
                 continue;
             }
             action.accept(tileEntity);
+            processed++;
+        }
+        return processed;
+    }
+
+    @Override
+    public int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, VisibilityResolver action) {
+        int processed = 0;
+        for (T tileEntity : knownTileEntities.values()) {
+            boolean currentVisibility = tileEntity.visible();
+            if (currentVisibility && (recheckTicks < 0 || currentTick - tileEntity.lastChecked() < recheckTicks)) {
+                continue;
+            }
+            byte shouldBeVisible = action.setVisible(tileEntity);
+            if (shouldBeVisible != VisibilityResolver.SKIPPED) {
+                setVisibility(tileEntity, currentVisibility, shouldBeVisible == VisibilityResolver.SHOW, currentTick);
+            }
             processed++;
         }
         return processed;

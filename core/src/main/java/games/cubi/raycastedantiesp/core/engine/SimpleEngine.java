@@ -421,20 +421,19 @@ public abstract class SimpleEngine implements Engine {
     }
 
     private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
-        int checked = blockView.forEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, tileEntityLocation -> {
+        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, tileEntityLocation -> {
             if (tileEntityLocation.world() == null || !tileEntityLocation.world().equals(playerLocation.world())) {
                 timings.incrementTileWorldSkipped();
-                return;
+                return BlockView.VisibilityResolver.SKIPPED;
             }
 
             if (playerLocation.distanceSquared(tileEntityLocation) > (double) tileEntityConfig.getRaycastRadius() * tileEntityConfig.getRaycastRadius()) {
                 timings.incrementTileRadiusSkipped();
-                blockView.setVisibility(tileEntityLocation, false, currentTick);
-                return;
+                return BlockView.VisibilityResolver.HIDE;
             }
             timings.incrementTileRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, tileEntityLocation, tileEntityConfig.getMaxOccludingCount() + 1, tileEntityConfig.getAlwaysShowRadius(), tileEntityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
-            blockView.setVisibility(tileEntityLocation, canSee, currentTick);
+            return canSee ? BlockView.VisibilityResolver.SHOW : BlockView.VisibilityResolver.HIDE;
         });
         timings.addTileChecked(checked);
     }
