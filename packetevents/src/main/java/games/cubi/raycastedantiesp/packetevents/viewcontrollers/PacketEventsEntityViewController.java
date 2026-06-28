@@ -420,6 +420,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                                 + (entity == null ? "missing-entity" : "self-entity"), 2, PacketEventsEntityViewController.class);
                         continue;
                     }
+                    if (entity.clientVisible()) {
+                        continue;
+                    }
                     PacketEventsEntityReplayData replayData = ensureReplayData(entity);
                     sendEntityShow(viewer, data, entity, replayData);
                     entity.setClientVisible(true);
