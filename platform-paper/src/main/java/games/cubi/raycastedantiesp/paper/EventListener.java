@@ -7,6 +7,7 @@ import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
+import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -43,7 +44,7 @@ public class EventListener extends PaperListener {
         return instance;
     }
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
-    public void onPlayerJoin(PlayerJoinEvent e) {
+    public void onPlayerJoin(PlayerClientLoadedWorldEvent e) {
         Player player = e.getPlayer();
 
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());

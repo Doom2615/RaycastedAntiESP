@@ -336,7 +336,7 @@ public abstract class SimpleEngine implements Engine {
             BlockView blockView = playerData.blockView();
 
             Locatable playerLocation = playerData.ownLocation();
-            if (playerLocation == null) {
+            if (playerLocation == null || playerLocation.world() == null) {
                 timings.incrementNullLocationSkippedPlayers();
                 continue;
             }
