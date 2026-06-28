@@ -1,5 +1,6 @@
 package games.cubi.raycastedantiesp.core.view;
 
+import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.ChunkSectionLocatable;
 import games.cubi.locatables.Locatable;
@@ -20,7 +21,7 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
 
     private final Map<ChunkSectionLocatable, BitSet /*true if that position is occluding. Positions are 0-15 for x,y,z*/> chunks = new ConcurrentHashMap<>();
     private final CanonicalSet<Locatable, T> knownTileEntities = new ConcurrentSelfMap<>();
-    private final ConcurrentLinkedQueue<BlockViewTransition> transitions = new ConcurrentLinkedQueue<>();
+    private final MultiThreadedQueue<BlockViewTransition> transitions = new MultiThreadedQueue<>();
 
     @Deprecated
     protected abstract T createTrackedTileEntity(BlockLocatable location, int blockID, boolean visible);

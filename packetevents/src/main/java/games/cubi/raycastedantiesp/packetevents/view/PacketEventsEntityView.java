@@ -1,5 +1,8 @@
 package games.cubi.raycastedantiesp.packetevents.view;
 
+import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
+import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
+import ca.spottedleaf.concurrentutil.map.SWMRInt2ObjectHashTable;
 import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
@@ -9,14 +12,12 @@ import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
-    private final Map<UUID, PacketEventsEntity> entitiesByUUID = new ConcurrentHashMap<>();
-    private final Map<Integer, UUID> entityUUIDsByID = new ConcurrentHashMap<>();
-    private final ConcurrentLinkedQueue<EntityViewTransition> transitions = new ConcurrentLinkedQueue<>();
+    private final Map<UUID, PacketEventsEntity> entitiesByUUID = new SWMRHashTable<>();
+    private final SWMRInt2ObjectHashTable<UUID> entityUUIDsByID = new SWMRInt2ObjectHashTable<>();
+    private final MultiThreadedQueue<EntityViewTransition> transitions = new MultiThreadedQueue<>();
     private final boolean isPlayerView;
 
     public PacketEventsEntityView(boolean isPlayerView) {
@@ -167,7 +168,14 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public int[] getKnownEntityIDs() {
-        return entityUUIDsByID.keySet().stream().mapToInt(Integer::intValue).toArray();
+        // This is only called while clearing on the Netty thread, so size()
+        // is stable and can be used as the exact output array length.
+        int[] entityIDs = new int[entityUUIDsByID.size()];
+        int[] count = new int[1];
+        entityUUIDsByID.forEachKey(entityID -> {
+            entityIDs[count[0]++] = entityID;
+        });
+        return entityIDs;
     }
 
     @Override
@@ -218,14 +226,13 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     public String getStringDataForDebugging() {
         StringBuilder builder = new StringBuilder();
         builder.append("EntityView isPlayerView=").append(isPlayerView).append("\n");
-        Set<Map.Entry<Integer, UUID>> entries = new HashSet<>(entityUUIDsByID.entrySet());
-        for (Map.Entry<Integer, UUID> entry : entries) {
-            PacketEventsEntity entity = entitiesByUUID.get(entry.getValue());
-            builder.append("EntityID=").append(entry.getKey())
-                    .append(" UUID=").append(entry.getValue())
+        entityUUIDsByID.forEach((entityID, entityUUID) -> {
+            PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
+            builder.append("EntityID=").append(entityID)
+                    .append(" UUID=").append(entityUUID)
                     .append(" Entity=").append(entity)
                     .append("\n");
-        }
+        });
         return builder.toString();
     }
 }
