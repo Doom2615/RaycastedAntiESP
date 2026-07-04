@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
     //paperweight.paperDevBundle("26.1.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
@@ -35,6 +35,7 @@ dependencies {
 
     implementation("org.jetbrains:annotations:24.0.1")
 
+    implementation(project(":leafpile"))
     implementation(project(":locatable-lib"))
     implementation(project(":logging"))
     implementation(project(":core"))
@@ -49,7 +50,7 @@ val javaToolchainService = project.extensions.getByType(JavaToolchainService::cl
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.6.1-SNAPSHOT"
+val platformPaperVersion: String = "0.7.1-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
@@ -126,7 +127,14 @@ tasks.shadowJar {
         include(project(":locatable-lib"))
         include(project(":core"))
         include(project(":packetevents"))
+
+        include(project(":leafpile"))
     }
+    relocate(
+        "ca.spottedleaf",
+        "games.cubi.libs.raycastedantiesp.spottedleaf"
+    )
+    minimize {} // get rid of leafpile bloat
     archiveBaseName.set("RaycastedAntiESP")
     archiveClassifier.set("")
 }

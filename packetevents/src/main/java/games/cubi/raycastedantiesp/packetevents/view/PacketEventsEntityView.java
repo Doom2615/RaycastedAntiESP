@@ -1,25 +1,28 @@
 package games.cubi.raycastedantiesp.packetevents.view;
 
+import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
+import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
 import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
-public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
-    private final Map<UUID, PacketEventsEntity> entitiesByUUID = new ConcurrentHashMap<>();
-    private final Map<Integer, UUID> entityUUIDsByID = new ConcurrentHashMap<>();
-    private final ConcurrentLinkedQueue<EntityViewTransition> transitions = new ConcurrentLinkedQueue<>();
+public class PacketEventsEntityView extends SingleThreadedGuard implements EntityView<PacketEventsEntity> {
+    private final SWMRHashTable<UUID, PacketEventsEntity> entitiesByUUID = new SWMRHashTable<>();
+    private final Int2ObjectOpenHashMap<UUID> entityUUIDsByID = new Int2ObjectOpenHashMap<>();
+    private final MultiThreadedQueue<EntityViewTransition> transitions = new MultiThreadedQueue<>();
     private final boolean isPlayerView;
 
     public PacketEventsEntityView(boolean isPlayerView) {
+        super(Thread.currentThread()); // Should be player's netty thread
         this.isPlayerView = isPlayerView;
     }
 
@@ -40,6 +43,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
         UUID entityUUID = entity.entityUUID();
         int entityID = entity.entityID();
+        guardThread();
         UUID previousUUIDForID = entityUUIDsByID.put(entityID, entityUUID);
         if (previousUUIDForID != null && !previousUUIDForID.equals(entityUUID)) {
             PacketEventsEntity previousEntityForID = entitiesByUUID.get(previousUUIDForID);
@@ -64,6 +68,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public void removeEntity(int entityID) {
+        guardThread();
         UUID entityUUID = entityUUIDsByID.remove(entityID);
         if (entityUUID == null) {
             return;
@@ -99,6 +104,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public boolean exists(int entityID) {
+        guardThread();
         return entityUUIDsByID.containsKey(entityID);
     }
 
@@ -162,12 +168,25 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public Collection<UUID> getKnownEntities() {
-        return List.copyOf(entitiesByUUID.keySet());
+        List<UUID> known = new ArrayList<>(entitiesByUUID.size());
+        entitiesByUUID.forEachKey(known::add);
+        return known;
     }
 
     @Override
     public int[] getKnownEntityIDs() {
-        return entityUUIDsByID.keySet().stream().mapToInt(Integer::intValue).toArray();
+        /*
+        guardThread();
+        // This is only called while clearing on the Netty thread, so size()
+        // is stable and can be used as the exact output array length.
+        int[] entityIDs = new int[entityUUIDsByID.size()];
+        int[] count = new int[1];
+        entityUUIDsByID.forEachKey(entityID -> {
+            entityIDs[count[0]++] = entityID;
+        });*/
+        guardThread();
+        return entityUUIDsByID.keySet().toIntArray();
+        //return entityIDs;
     }
 
     @Override
@@ -181,6 +200,26 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
             processed++;
         }
         return processed;
+    }
+
+    @Override
+    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, Consumer<NettyEntityLocatable<?,?>> action) {
+        if (countingActuallyNeeded) {
+            return entitiesByUUID.forEachValueCounted( (entity) -> {
+                if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+                    return false;
+                }
+                action.accept(entity);
+                return true;
+            });
+        }
+        entitiesByUUID.forEachValue( (entity) -> {
+            if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+                return;
+            }
+            action.accept(entity);
+        });
+        return 0;
     }
 
     @Override
@@ -205,12 +244,14 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public void clear() {
+        guardThread();
         entitiesByUUID.clear();
         entityUUIDsByID.clear();
         transitions.clear();
     }
 
     private PacketEventsEntity getTrackedEntity(int entityID) {
+        guardThread();
         UUID entityUUID = entityUUIDsByID.get(entityID);
         return entityUUID == null ? null : entitiesByUUID.get(entityUUID);
     }
@@ -218,14 +259,14 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     public String getStringDataForDebugging() {
         StringBuilder builder = new StringBuilder();
         builder.append("EntityView isPlayerView=").append(isPlayerView).append("\n");
-        Set<Map.Entry<Integer, UUID>> entries = new HashSet<>(entityUUIDsByID.entrySet());
-        for (Map.Entry<Integer, UUID> entry : entries) {
-            PacketEventsEntity entity = entitiesByUUID.get(entry.getValue());
-            builder.append("EntityID=").append(entry.getKey())
-                    .append(" UUID=").append(entry.getValue())
+        guardThread();
+        entityUUIDsByID.forEach((entityID, entityUUID) -> {
+            PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
+            builder.append("EntityID=").append(entityID)
+                    .append(" UUID=").append(entityUUID)
                     .append(" Entity=").append(entity)
                     .append("\n");
-        }
+        });
         return builder.toString();
     }
 }

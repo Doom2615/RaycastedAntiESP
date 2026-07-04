@@ -22,7 +22,10 @@ dependencies {
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
     compileOnly("it.unimi.dsi:fastutil:8.5.18")
+
     implementation(project(":locatable-lib"))
+
+    compileOnly(project(":leafpile"))
     compileOnly(project(":logging"))
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
@@ -32,7 +35,7 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
 }
 
-val coreVersion = "0.5.2-SNAPSHOT"
+val coreVersion = "0.5.4-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")

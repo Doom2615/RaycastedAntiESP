@@ -170,16 +170,19 @@ public class RaycastedAntiESPCommand {
                 locatables[i] = playerLocatable.clonePlainAndCentreIfBlockLocation().add(unitDirection);
             }
             Bukkit.getAsyncScheduler().runNow(RaycastedAntiESP.get(), (ignored) -> {
+                int successfulRays = 0;
                 long startTime = System.nanoTime();
                 for (Locatable locatable : locatables) {
-                    RaycastUtil.raycast(playerData, playerLocatable, locatable, 3, 0, 100, false, playerData.blockView(), 1, null);
+                    if (RaycastUtil.raycast(playerData, playerLocatable, locatable, 3, 0, 100, false, playerData.blockView(), 1, null)) successfulRays++;
                 }
                 long endTime = System.nanoTime();
                 long duration = endTime - startTime;
                 double averageTime = duration / (double) locatables.length;
+                final int successfulRaysFinal = successfulRays;
                 PaperScheduler.runForAudience(RaycastedAntiESP.get(), player, () -> {
                     player.sendRichMessage("Average raycast time: " + averageTime + " nanoseconds");
                     player.sendRichMessage("Total raycast time: " + duration + " nanoseconds");
+                    player.sendRichMessage("Successful rays: " + successfulRaysFinal + "/" + locatables.length);
                 });
             });
         }

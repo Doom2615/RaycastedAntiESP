@@ -7,6 +7,8 @@ import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
+import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -15,7 +17,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
@@ -42,26 +43,22 @@ public class EventListener extends PaperListener {
         }
         return instance;
     }
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onPlayerDisconnect(PlayerQuitEvent e) {
-        PlayerRegistry.getInstance().unregisterPlayer(e.getPlayer().getUniqueId());
-    }
-
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
-    public void onPlayerJoin(PlayerJoinEvent e) {
+    public void onPlayerJoin(PlayerClientLoadedWorldEvent e) {
         Player player = e.getPlayer();
+
+        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+        if (playerData == null) {
+            Logger.error("Player joined before packet state was registered. Kicking player=" + player.getName() + " uuid=" + player.getUniqueId(), 1, EventListener.class);
+            player.kick(MiniMessage.miniMessage().deserialize("RaycastedAntiESP failed to initialise your packet state. Please reconnect. Report this issue to the server you are playing on if you are still unable to join."));
+            return;
+        }
 
         if (player.hasPermission("raycastedantiesp.updatecheck")) { //todo: centralise permission strings to prevent issues when perm names are changed
             checkForUpdates(plugin, player);
         }
 
         boolean hasBypassPermission = player.hasPermission("raycastedantiesp.bypass");
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-
-        if (playerData == null) {
-            Logger.warning("Failed to load player data for " + player.getName() + " (" + player.getUniqueId() + "). Attempting to reconstruct.", 3, EventListener.class);
-            playerData = PlayerRegistry.getInstance().registerAndGetPlayerIfAbsent(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
-        }
         playerData.setBypassPermission(hasBypassPermission);
         updateOwnLocation(playerData, player.getEyeLocation());
     }
