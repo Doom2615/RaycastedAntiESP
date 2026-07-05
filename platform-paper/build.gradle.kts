@@ -36,7 +36,7 @@ dependencies {
     implementation("org.jetbrains:annotations:24.0.1")
 
     implementation(project(":leafpile"))
-    implementation(project(":locatable-lib"))
+    implementation(project(":locatables"))
     implementation(project(":logging"))
     implementation(project(":core"))
     implementation(project(":packetevents"))
@@ -124,7 +124,7 @@ tasks {
 tasks.shadowJar {
     dependencies {
         include(project(":logging"))
-        include(project(":locatable-lib"))
+        include(project(":locatables"))
         include(project(":core"))
         include(project(":packetevents"))
 

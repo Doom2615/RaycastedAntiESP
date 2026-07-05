@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":locatable-lib"))
+    implementation(project(":locatables"))
     implementation(project(":logging"))
     implementation(project(":core"))
 

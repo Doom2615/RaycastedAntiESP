@@ -5,3 +5,6 @@
 	path = leafpile
 	url = https://github.com/Cubicake/ParallelepipedLeafPile.git
 	branch = java-21-main
+[submodule "locatables"]
+	path = locatables
+	url = https://github.com/Cubicake/Locatables.git

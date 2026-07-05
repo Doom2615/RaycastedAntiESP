@@ -23,7 +23,7 @@ dependencies {
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
     compileOnly("it.unimi.dsi:fastutil:8.5.18")
 
-    implementation(project(":locatable-lib"))
+    implementation(project(":locatables"))
 
     compileOnly(project(":leafpile"))
     compileOnly(project(":logging"))

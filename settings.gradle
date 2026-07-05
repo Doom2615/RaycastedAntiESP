@@ -7,7 +7,7 @@ dependencyResolutionManagement {
     }
 }
 
-include 'locatable-lib'
+include 'locatables'
 include 'logging'
 include 'core'
 include 'platform-paper'
