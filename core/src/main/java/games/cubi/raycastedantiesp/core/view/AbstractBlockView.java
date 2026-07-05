@@ -56,6 +56,7 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
             Logger.error("Tile entity null when attempting to update or insert", 3, AbstractBlockView.class);
             return;
         }
+        tileEntity.clearExtraData();
         tileEntity.setBlockID(blockID);
     }
 

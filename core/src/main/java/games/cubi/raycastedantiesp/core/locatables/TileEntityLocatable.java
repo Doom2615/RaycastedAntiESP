@@ -17,6 +17,7 @@ public interface TileEntityLocatable<T> extends BlockLocatable, ImmutableLocatab
 
     T extraData();
     TileEntityLocatable<T> setExtraData(T extraData);
+    void clearExtraData();
 
     @Override
     default boolean isMutable() {
