@@ -586,10 +586,15 @@ public abstract class PacketEntityViewController<P> {
         if (!vehicle.clientVisible()) {
             return;
         }
-        sendEntityPassengerPacket(vehicle.entityID(), collectVisiblePassengers(vehicle.passengerIDs(), playerData), playerData);
+        sendEntityPassengerPacket(vehicle.entityID(), collectClientVisiblePassengers(vehicle.passengerIDs(), playerData), playerData);
     }
 
-    private IntArrayList collectVisiblePassengers(int[] passengerIDs, PlayerData playerData) {
+    protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData) {
+        // Integer.MIN_VALUE cannot be a valid tracked entity ID, so this disables the exception.
+        return collectClientVisiblePassengers(passengerIDs, playerData, Integer.MIN_VALUE);
+    }
+
+    protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData, int entityBeingShownID) {
         int size = passengerIDs == null ? 0 : passengerIDs.length;
         IntArrayList visiblePassengers = new IntArrayList(size);
         if (passengerIDs == null) {
@@ -597,7 +602,7 @@ public abstract class PacketEntityViewController<P> {
         }
         for (int passengerID : passengerIDs) {
             NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
-            if (passenger != null && passenger.visible()) {
+            if (passenger != null && (passenger.clientVisible() || passenger.entityID() == entityBeingShownID)) {
                 visiblePassengers.add(passengerID);
             }
         }

@@ -37,7 +37,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -449,31 +448,32 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             );
     }
 
-    private WrapperPlayServerSetPassengers buildPassengersPacket(@Nullable NettyEntityLocatable<?,?> entity, PlayerData playerData) {
+    private WrapperPlayServerSetPassengers buildPassengersPacket(@Nullable NettyEntityLocatable<?,?> entity, PlayerData playerData, int entityBeingShownID) {
         if (entity == null) {
+            return null;
+        }
+        if (!clientVisibleOrBeingShown(entity, entityBeingShownID)) {
             return null;
         }
         int[] passengerIDs = entity.passengerIDs();
         if (passengerIDs == null || passengerIDs.length == 0) {
             return null;
         }
-        ArrayList<Integer> visiblePassengerIDs = new ArrayList<>();
-        for (int passengerID : passengerIDs) {
-            NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
-            if (passenger != null && passenger.visible()) {
-                visiblePassengerIDs.add(passengerID);
-            }
-        }
-        return new WrapperPlayServerSetPassengers(entity.entityID(), visiblePassengerIDs.stream().mapToInt(Integer::intValue).toArray());
+        return new WrapperPlayServerSetPassengers(entity.entityID(), collectClientVisiblePassengers(passengerIDs, playerData, entityBeingShownID).toIntArray());
     }
 
     private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData) {
+        // Integer.MIN_VALUE cannot be a valid tracked entity ID, so this disables the exception.
+        return buildLeashPackets(entity, playerData, Integer.MIN_VALUE);
+    }
+
+    private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData, int entityBeingShownID) {
         int[] leashedIDs = entity.leashedEntityIDsOrNull();
         int leashingID = entity.leashingEntity();
         WrapperPlayServerAttachEntity leashingShow = null;
         if (leashingID != NO_LEASHER) {
             NettyEntityLocatable<?,?> leashHolder = playerData.entityFromID(leashingID);
-            if (leashHolder != null && leashHolder.visible()) {
+            if (leashHolder != null && clientVisibleOrBeingShown(leashHolder, entityBeingShownID)) {
                 leashingShow = new WrapperPlayServerAttachEntity(entity.entityID(), leashingID, true);
             }
         }
@@ -487,13 +487,17 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             index = 1;
         }
         for (int leashedID : leashedIDs) {
-            NettyEntityLocatable<?,?> leashHolder = playerData.entityFromID(leashedID);
-            if (leashHolder != null && leashHolder.visible()) {
+            NettyEntityLocatable<?,?> leashedEntity = playerData.entityFromID(leashedID);
+            if (leashedEntity != null && clientVisibleOrBeingShown(leashedEntity, entityBeingShownID)) {
                 packets[index] = new WrapperPlayServerAttachEntity(leashedID, entity.entityID(), true);
                 index++;
             }
         }
         return packets;
+    }
+
+    private boolean clientVisibleOrBeingShown(NettyEntityLocatable<?,?> entity, int entityBeingShownID) {
+        return entity.clientVisible() || entity.entityID() == entityBeingShownID;
     }
 
     private WrapperPlayServerEntityEffect copyEffectPacket(WrapperPlayServerEntityEffect effect) {
@@ -608,11 +612,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
         }
-        COMMON.writeIfPresent(viewer, buildPassengersPacket(entity, data));
+        COMMON.writeIfPresent(viewer, buildPassengersPacket(entity, data, entity.entityID()));
         if (entity.vehicleID() != NO_VEHICLE) {
-            COMMON.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data));
+            COMMON.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data, entity.entityID()));
         }
-        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data);
+        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data, entity.entityID());
         if (leashPackets == null) return;
         for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
             if (leashPacket != null) {
