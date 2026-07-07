@@ -2,10 +2,10 @@ package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
+import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
-import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -64,7 +64,7 @@ public interface BlockView extends Clearable {
 
     void removeChunkSection(UUID world, int chunkX, int chunkY, int chunkZ);
 
-    void replaceChunkSection(UUID world, int chunkX, int chunkY, int chunkZ, BitSet occludingBlocks);
+    void replaceChunkSection(UUID world, int chunkX, int chunkY, int chunkZ, OccludingChunkData occludingBlocks);
 
     default <T> T cast() {
         return (T) this;

@@ -9,7 +9,7 @@ public sealed interface OccludingChunkData permits ChunkData, OccludingChunkData
      * The parameters here are local coordinates within the chunk, so they should be in the range [0, 15].
      * @return true if the block at the given coordinates is occluding, false otherwise.
      */
-    boolean isOccluding(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z);
+    boolean isOccludingLocal(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z);
 
     /**
      * The parameters here are local coordinates within the chunk, so they should be in the range [0, 15].
@@ -17,7 +17,7 @@ public sealed interface OccludingChunkData permits ChunkData, OccludingChunkData
     void setOccluding(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z, boolean occluding);
 
     default boolean get(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z) {
-        return isOccluding(x, y, z);
+        return isOccludingLocal(x, y, z);
     }
 
     default void set(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z, boolean value) {

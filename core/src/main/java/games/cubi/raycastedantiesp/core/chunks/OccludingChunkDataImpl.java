@@ -16,19 +16,19 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
     private final long[] occlusionData;
 
     public OccludingChunkDataImpl() {
-        this.occlusionData = new long[ChunkDataPacking.WORD_COUNT];
+        this.occlusionData = new long[ChunkData.WORD_COUNT];
     }
 
     public OccludingChunkDataImpl(long[] occlusionData) {
-        if (occlusionData.length != ChunkDataPacking.WORD_COUNT) {
-            throw new IllegalArgumentException("occlusionData must contain " + ChunkDataPacking.WORD_COUNT + " longs");
+        if (occlusionData.length != ChunkData.WORD_COUNT) {
+            throw new IllegalArgumentException("occlusionData must contain " + ChunkData.WORD_COUNT + " longs");
         }
         this.occlusionData = Arrays.copyOf(occlusionData, occlusionData.length);
     }
 
     @Override
-    public boolean isOccluding(int x, int y, int z) {
-        int packed = ChunkDataPacking.pack(x, y, z);
+    public boolean isOccludingLocal(int x, int y, int z) {
+        int packed = ChunkData.pack(x, y, z);
         // >>> 6 divides the packed block index by 64 to select the containing long.
         int wordIndex = packed >>> 6;
         // 1L << packed creates a mask with only the packed block's bit set.
@@ -40,7 +40,7 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
 
     @Override
     public void setOccluding(int x, int y, int z, boolean occluding) {
-        int packed = ChunkDataPacking.pack(x, y, z);
+        int packed = ChunkData.pack(x, y, z);
         // >>> 6 divides the packed block index by 64 to select the containing long. Avoids signed division; probably an unnecessary optimisation but why not
         int wordIndex = packed >>> 6;
         // 1L << packed creates a mask for only the packed block's bit.
