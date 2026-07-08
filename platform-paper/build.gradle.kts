@@ -40,6 +40,15 @@ dependencies {
     implementation(project(":logging"))
     implementation(project(":core"))
     implementation(project(":packetevents"))
+
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+configurations.named("testRuntimeClasspath") {
+    exclude(group = "at.yawk.lz4", module = "lz4-java")
 }
 
 java {
@@ -118,6 +127,10 @@ tasks {
         filesMatching("build-properties/platform.yml") {
             expand(gitProps)
         }
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 
