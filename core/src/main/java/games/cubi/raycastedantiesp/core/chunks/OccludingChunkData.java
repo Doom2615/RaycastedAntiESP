@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Range;
 
 import java.util.BitSet;
 
-public sealed interface OccludingChunkData permits ChunkData, OccludingChunkDataImpl {
+public sealed interface OccludingChunkData permits ChunkData, OccludingChunkData.Solid, OccludingChunkDataImpl {
     /**
      * The parameters here are local coordinates within the chunk, so they should be in the range [0, 15].
      * @return true if the block at the given coordinates is occluding, false otherwise.
@@ -13,19 +13,22 @@ public sealed interface OccludingChunkData permits ChunkData, OccludingChunkData
 
     /**
      * The parameters here are local coordinates within the chunk, so they should be in the range [0, 15].
+     * @return The object to be stored. Mutations may require upgrading the object to a more complex implementation, so the returned object may not be the same as the current one.
      */
-    void setOccluding(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z, boolean occluding);
+    OccludingChunkData setOccluding(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z, boolean occluding);
 
-    default boolean get(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z) {
-        return isOccludingLocal(x, y, z);
-    }
-
-    default void set(@Range(from = 0, to = 15) int x, @Range(from = 0, to = 15) int y, @Range(from = 0, to = 15) int z, boolean value) {
-        setOccluding(x, y, z, value);
-    }
-
-    static OccludingChunkData empty() {
+    static OccludingChunkDataImpl empty() {
         return new OccludingChunkDataImpl();
+    }
+
+    static OccludingChunkData filled() {
+        return OccludingChunkDataImpl.solid();
+    }
+
+    OccludingChunkData SOLID = new Solid();
+
+    static OccludingChunkData solid() {
+        return SOLID;
     }
 
     static OccludingChunkData copyOf(BitSet bitSet) {
@@ -36,5 +39,17 @@ public sealed interface OccludingChunkData permits ChunkData, OccludingChunkData
             words = resized;
         }
         return new OccludingChunkDataImpl(words);
+    }
+
+    final class Solid implements OccludingChunkData {
+        @Override
+        public boolean isOccludingLocal(int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public OccludingChunkData setOccluding(int x, int y, int z, boolean occluding) {
+            return filled().setOccluding(x, y, z, occluding);
+        }
     }
 }

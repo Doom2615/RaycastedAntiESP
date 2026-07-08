@@ -26,6 +26,13 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
         this.occlusionData = Arrays.copyOf(occlusionData, occlusionData.length);
     }
 
+    static OccludingChunkDataImpl solid() {
+        // Make every bit 1, which is the same as making every long -1
+        long[] solidData = new long[ChunkData.WORD_COUNT];
+        Arrays.fill(solidData, -1L);
+        return new OccludingChunkDataImpl(solidData);
+    }
+
     @Override
     public boolean isOccludingLocal(int x, int y, int z) {
         int packed = ChunkData.pack(x, y, z);
@@ -39,7 +46,7 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
     }
 
     @Override
-    public void setOccluding(int x, int y, int z, boolean occluding) {
+    public OccludingChunkData setOccluding(int x, int y, int z, boolean occluding) {
         int packed = ChunkData.pack(x, y, z);
         // >>> 6 divides the packed block index by 64 to select the containing long. Avoids signed division; probably an unnecessary optimisation but why not
         int wordIndex = packed >>> 6;
@@ -51,5 +58,6 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
         long updated = occluding ? word | mask : word & ~mask;
         // Not an atomicity issue since writes are single-threaded
         LONG_ARRAY_HANDLE.setOpaque(occlusionData, wordIndex, updated);
+        return this;
     }
 }
