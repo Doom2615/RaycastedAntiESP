@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.utils;
 
 import games.cubi.logs.Logger;
@@ -68,15 +76,15 @@ public record BuildProperties(String gitHashLong, String gitHashShort, String bu
         return new BuildProperties("unknown", "unknown", "unknown", new Version(-1, -1, -1, true));
     }
 
-    record Version(short major, short minor, short patch, boolean snapshot) {
-        Version(int major, int minor, int patch, boolean snapshot) {
+    public record Version(short major, short minor, short patch, boolean snapshot) implements Comparable<Version> {
+        public Version(int major, int minor, int patch, boolean snapshot) {
             this((short) major, (short) minor, (short) patch, snapshot);
         }
 
         public static Version parse(String versionString) {
-            String[] parts = versionString.split("[.-]");
-            if (parts.length < 3) {
-                Logger.errorAndReturn(new IllegalArgumentException("Version string must be in the format 'major.minor.patch'"), 2, BuildProperties.class, Version.class);
+            String[] parts = versionString.replaceFirst("[+-].*$", "").split("\\.");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Version string must be in the format 'major.minor.patch'. Attempted: " + versionString);
             }
             try {
                 short major = Short.parseShort(parts[0]);
@@ -85,9 +93,19 @@ public record BuildProperties(String gitHashLong, String gitHashShort, String bu
                 boolean snapshot = versionString.contains("SNAPSHOT");
                 return new Version(major, minor, patch, snapshot);
             } catch (NumberFormatException e) {
-                Logger.errorAndReturn(new IllegalArgumentException("Version parts must be valid short integers. Attempted: " + versionString, e), 2, BuildProperties.class, Version.class);
-                return new Version(-1, -1, -1, true);
+                throw new IllegalArgumentException("Version parts must be valid short integers. Attempted: " + versionString, e);
             }
+        }
+
+        @Override
+        public int compareTo(Version other) {
+            int majorDifference = Short.compare(major, other.major);
+            if (majorDifference != 0) return majorDifference;
+
+            int minorDifference = Short.compare(minor, other.minor);
+            if (minorDifference != 0) return minorDifference;
+
+            return Short.compare(patch, other.patch);
         }
     }
 }
