@@ -1,10 +1,11 @@
 package games.cubi.raycastedantiesp.core.view.chunks;
 
 import ca.spottedleaf.concurrentutil.map.SWMRLong2ObjectHashTable;
+import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
-import games.cubi.raycastedantiesp.core.chunks.OccludingChunkDataImpl;
+
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packChunkCoords;
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packGlobalCoords;
 
@@ -42,44 +43,13 @@ public final class OccludingChunkSectionStore extends SWMRLong2ObjectHashTable<O
     }
 
     @Override
-    public void replaceSection(int chunkX, int sectionY, int chunkZ, char[] packedBlockIDs) {
-        if (packedBlockIDs.length != ChunkData.BLOCK_COUNT) {
-            throw new IllegalArgumentException("packedBlockIDs must contain " + ChunkData.BLOCK_COUNT + " entries");
-        }
-
-        long[] occlusionData = new long[ChunkData.WORD_COUNT];
-        boolean hasOccluding = false;
-        for (int packed = 0; packed < ChunkData.BLOCK_COUNT; packed++) {
-            int blockID = packedBlockIDs[packed];
-            if (blockID != 0 && blockInfoResolver.isOccluding(blockID)) {
-                occlusionData[packed >>> 6] |= 1L << packed;
-                hasOccluding = true;
-            }
-        }
-
-        long key = packChunkCoords(chunkX, sectionY, chunkZ);
-        if (hasOccluding) {
-            put(key, new OccludingChunkDataImpl(occlusionData));
-        }
-        else {
-            remove(key);
-        }
+    public void replaceSection(int chunkX, int sectionY, int chunkZ, BlockChunkData data) {
+        throw new UnsupportedOperationException("Occlusion chunk storage requires occlusion data for section replacement");
     }
 
     @Override
-    public void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, long[] occlusionData) {
-        if (occlusionData.length != ChunkData.WORD_COUNT) {
-            throw new IllegalArgumentException("occlusionData must contain " + ChunkData.WORD_COUNT + " longs");
-        }
-
-        long key = packChunkCoords(chunkX, sectionY, chunkZ);
-        for (long word : occlusionData) {
-            if (word != 0L) {
-                put(key, new OccludingChunkDataImpl(occlusionData));
-                return;
-            }
-        }
-        remove(key);
+    public void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, OccludingChunkData data) {
+        put(packChunkCoords(chunkX, sectionY, chunkZ), data);
     }
 
     @Override
@@ -89,7 +59,8 @@ public final class OccludingChunkSectionStore extends SWMRLong2ObjectHashTable<O
 
     @Override
     public void removeColumn(int chunkX, int chunkZ) {
-        long key = packChunkCoords(chunkX, SECTION_Y_MIN, chunkZ);
+        // Start at raw Y 0 so the increment covers every possible 8-bit signed section coordinate exactly once.
+        long key = packChunkCoords(chunkX, 0, chunkZ);
         for (int i = 0; i < SECTION_Y_COUNT; i++) {
             remove(key);
             key += SECTION_Y_INCREMENT;

@@ -1,13 +1,16 @@
 package games.cubi.raycastedantiesp.core.view.chunks;
 
+import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
+import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
+
 public interface ChunkSectionStore {
     boolean isOccluding(int x, int y, int z);
 
     void setBlockID(int x, int y, int z, int blockID);
 
-    void replaceSection(int chunkX, int sectionY, int chunkZ, char[] packedBlockIDs);
+    void replaceSection(int chunkX, int sectionY, int chunkZ, BlockChunkData data);
 
-    void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, long[] occlusionData);
+    void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, OccludingChunkData data);
 
     void removeSection(int chunkX, int sectionY, int chunkZ);
 

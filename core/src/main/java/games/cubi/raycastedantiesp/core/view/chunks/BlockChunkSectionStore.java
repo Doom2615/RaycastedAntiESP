@@ -4,6 +4,8 @@ import ca.spottedleaf.concurrentutil.map.SWMRLong2ObjectHashTable;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
+import games.cubi.raycastedantiesp.core.chunks.blocks.TwoBlockChunkData;
+
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packChunkCoords;
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packGlobalCoords;
 
@@ -21,39 +23,36 @@ public final class BlockChunkSectionStore extends SWMRLong2ObjectHashTable<Block
         return chunk != null && chunk.isOccludingLocal(x & ChunkData.LOCAL_MASK, y & ChunkData.LOCAL_MASK, z & ChunkData.LOCAL_MASK);
     }
 
+    /**
+     * This method is not thread-safe and should only be called from the netty thread.
+     */
     @Override
     public void setBlockID(int x, int y, int z, int blockID) {
         long key = packGlobalCoords(x, y, z);
         char storedBlockID = toStoredBlockID(blockID);
         BlockChunkData existing = get(key);
-        if (existing == null) {
+        if (existing == null) { // this means the chunk is currently air (or something's gone horribly wrong)
             if (storedBlockID == 0) {
                 return;
             }
-            existing = BlockChunkData.filled((char) 0, blockInfoResolver);
+            TwoBlockChunkData newChunk = TwoBlockChunkData.upgradeFromAir(storedBlockID, x, y, z, blockInfoResolver);
+            put(key, newChunk);
+            return;
         }
 
-        BlockChunkData updated = existing.setBlockID(x & ChunkData.LOCAL_MASK, y & ChunkData.LOCAL_MASK, z & ChunkData.LOCAL_MASK, storedBlockID);
-        if (updated != existing || get(key) == null) {
+        BlockChunkData updated = existing.setBlockID(x & ChunkData.LOCAL_MASK, y & ChunkData.LOCAL_MASK, z & ChunkData.LOCAL_MASK, storedBlockID, blockInfoResolver);
+        if (updated != existing) {
             put(key, updated);
         }
     }
 
     @Override
-    public void replaceSection(int chunkX, int sectionY, int chunkZ, char[] packedBlockIDs) {
-        if (packedBlockIDs.length != ChunkData.BLOCK_COUNT) {
-            throw new IllegalArgumentException("packedBlockIDs must contain " + ChunkData.BLOCK_COUNT + " entries");
-        }
-        long key = packChunkCoords(chunkX, sectionY, chunkZ);
-        if (isAllAir(packedBlockIDs)) {
-            remove(key);
-            return;
-        }
-        put(key, BlockChunkData.copyOf(packedBlockIDs, blockInfoResolver));
+    public void replaceSection(int chunkX, int sectionY, int chunkZ, BlockChunkData data) {
+        put(packChunkCoords(chunkX, sectionY, chunkZ), data);
     }
 
     @Override
-    public void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, long[] occlusionData) {
+    public void replaceSectionOcclusion(int chunkX, int sectionY, int chunkZ, games.cubi.raycastedantiesp.core.chunks.OccludingChunkData data) {
         throw new UnsupportedOperationException("Block chunk storage requires full block IDs for section replacement");
     }
 
@@ -64,7 +63,8 @@ public final class BlockChunkSectionStore extends SWMRLong2ObjectHashTable<Block
 
     @Override
     public void removeColumn(int chunkX, int chunkZ) {
-        long key = packChunkCoords(chunkX, SECTION_Y_MIN, chunkZ);
+        // Start at the raw 8-bit Y value 0. Incrementing visits 0..255, which represents signed section Y values 0..127 then -128..-1.
+        long key = packChunkCoords(chunkX, 0, chunkZ);
         for (int i = 0; i < SECTION_Y_COUNT; i++) {
             remove(key);
             key += SECTION_Y_INCREMENT;
@@ -88,12 +88,4 @@ public final class BlockChunkSectionStore extends SWMRLong2ObjectHashTable<Block
         return (char) blockID;
     }
 
-    private static boolean isAllAir(char[] packedBlockIDs) {
-        for (char blockID : packedBlockIDs) {
-            if (blockID != 0) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
