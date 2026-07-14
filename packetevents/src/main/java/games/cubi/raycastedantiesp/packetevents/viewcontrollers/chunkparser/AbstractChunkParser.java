@@ -2,6 +2,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers.chunkparser;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
+import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityTypes;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
@@ -28,6 +29,7 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
     private final boolean mutatePackets;
     private final IntUnaryOperator hiddenBlockID;
     private final boolean modernHeightmaps;
+    private final ClientVersion clientVersion;
 
     protected AbstractChunkParser(BlockInfoResolver blockInfoResolver, boolean mutatePackets, IntUnaryOperator hiddenBlockID) {
         this.blockInfoResolver = blockInfoResolver;
@@ -35,6 +37,7 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         this.hiddenBlockID = hiddenBlockID;
         ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
         this.modernHeightmaps = version.isNewerThanOrEquals(ServerVersion.V_1_21_5);
+        this.clientVersion = version.toClientVersion();
     }
 
     protected abstract @Nullable D parseSection(Chunk_v1_18 section);
@@ -44,25 +47,23 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
     @Override
     public final @Nullable Column parse(BlockView blockView, UUID world, Column column, int minimumSectionY) {
         BaseChunk[] sections = column.getChunks();
-        boolean[] includedSections = new boolean[sections.length];
-        long[][] managedBySection = new long[sections.length][];
-        MutableBlockLocatable key = new MutableBlockLocatable(world);
+        long[][] managedBySection = null;
+        MutableBlockLocatable key = null;
+        int chunkX = column.getX();
+        int chunkZ = column.getZ();
+        // Shifting the chunk coordinate left by four reserves the low four bits for the local block coordinate.
+        int blockOriginX = chunkX << 4;
+        int blockOriginZ = chunkZ << 4;
         boolean mutatedBlock = false;
 
         for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
-            BaseChunk rawSection = sections[sectionIndex];
-            if (rawSection == null) {
-                continue;
-            }
-            Chunk_v1_18 section = (Chunk_v1_18) rawSection;
-            includedSections[sectionIndex] = true;
+            Chunk_v1_18 section = (Chunk_v1_18) sections[sectionIndex];
             int sectionY = minimumSectionY + sectionIndex;
             D data = parseSection(section);
             if (data == null) {
-                // Null means the section is empty, so we can skip it.
-                blockView.removeChunkSection(world, column.getX(), sectionY, column.getZ());
+                blockView.removeChunkSection(world, chunkX, sectionY, chunkZ);
             } else {
-                storeSection(blockView, world, column.getX(), sectionY, column.getZ(), data);
+                storeSection(blockView, world, chunkX, sectionY, chunkZ, data);
             }
 
             if (!sectionMayContainManagedTiles(section)) {
@@ -78,19 +79,25 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
                         }
                         if (managed == null) {
                             managed = new long[ChunkData.WORD_COUNT];
+                            if (managedBySection == null) {
+                                managedBySection = new long[sections.length][];
+                            }
                             managedBySection[sectionIndex] = managed;
                         }
                         int packed = ChunkData.packUncheckedGuarded(localX, localY, localZ);
                         // >>> 6 selects the containing 64-bit word; Java masks the shift distance to the bit within that word.
                         managed[packed >>> 6] |= 1L << packed;
-                        int blockX = (column.getX() << 4) + localX;
+                        int blockX = blockOriginX + localX;
                         int blockY = (sectionY << 4) + localY;
-                        int blockZ = (column.getZ() << 4) + localZ;
+                        int blockZ = blockOriginZ + localZ;
+                        if (key == null) {
+                            key = new MutableBlockLocatable(world);
+                        }
                         key.set(blockX, blockY, blockZ);
-                        blockView.updateOrInsertTileEntity(key, blockID, !mutatePackets);
+                        TileEntityLocatable<?> state = blockView.updateOrInsertTileEntity(key, blockID, !mutatePackets);
                         if (!mutatePackets) {
-                            blockView.recordOutboundTileEntityVisibility(key, true);
-                        } else if (!blockView.isVisible(key, 0)) {
+                            blockView.recordOutboundTileEntityVisibility(state, true);
+                        } else if (state != null && !state.visible()) {
                             section.set(localX, localY, localZ, hiddenBlockID.applyAsInt(blockY));
                             mutatedBlock = true;
                         }
@@ -99,33 +106,39 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
             }
         }
 
-        blockView.pruneTileEntitiesAbsentFromIncludedChunkSections(world, column.getX(), column.getZ(), minimumSectionY, includedSections, managedBySection);
+        blockView.pruneTileEntitiesAbsentFromChunkSections(world, chunkX, chunkZ, minimumSectionY, sections.length, managedBySection);
         TileEntity[] sourceTileEntities = column.getTileEntities();
         TileEntity[] filtered = sourceTileEntities;
         boolean stripped = false;
         int retainedCount = 0;
         TileEntity[] retained = null;
-        if (sourceTileEntities != null) {
-            for (int index = 0; index < sourceTileEntities.length; index++) {
-                TileEntity tileEntity = sourceTileEntities[index];
-                boolean strip = processTileEntity(blockView, world, column.getX(), column.getZ(), sections, minimumSectionY, includedSections, managedBySection, tileEntity, key);
-                if (mutatePackets && strip) {
+        if (sourceTileEntities.length != 0 && key == null) {
+            key = new MutableBlockLocatable(world);
+        }
+        for (int index = 0; index < sourceTileEntities.length; index++) {
+            TileEntity tileEntity = sourceTileEntities[index];
+            boolean strip = processTileEntity(blockView, blockOriginX, blockOriginZ, sections, minimumSectionY, managedBySection, tileEntity, key);
+            if (mutatePackets && strip) {
+                if (!stripped) {
                     stripped = true;
-                    if (retained == null && index > 0) {
-                        retained = new TileEntity[sourceTileEntities.length];
+                    if (index > 0) {
+                        // At least one entry is gone, so sourceLength - 1 is the largest final array we can need.
+                        retained = new TileEntity[sourceTileEntities.length - 1];
                         System.arraycopy(sourceTileEntities, 0, retained, 0, index);
                         retainedCount = index;
                     }
-                } else if (stripped) {
-                    if (retained == null) {
-                        retained = new TileEntity[sourceTileEntities.length];
-                    }
-                    retained[retainedCount++] = tileEntity;
                 }
+            } else if (stripped) {
+                if (retained == null) {
+                    retained = new TileEntity[sourceTileEntities.length - 1];
+                }
+                retained[retainedCount++] = tileEntity;
             }
-            if (stripped) {
-                filtered = retained == null ? EMPTY_TILE_ENTITIES : Arrays.copyOf(retained, retainedCount);
-            }
+        }
+        if (stripped) {
+            filtered = retained == null
+                    ? EMPTY_TILE_ENTITIES
+                    : retainedCount == retained.length ? retained : Arrays.copyOf(retained, retainedCount);
         }
 
         return mutatePackets && (mutatedBlock || stripped) ? copyColumn(column, filtered) : null;
@@ -144,23 +157,25 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         return true;
     }
 
-    private boolean processTileEntity(BlockView blockView, UUID world, int chunkX, int chunkZ, BaseChunk[] sections, int minimumSectionY,
-                                      boolean[] includedSections, long[][] managedBySection, TileEntity tileEntity, MutableBlockLocatable key) {
-        int blockY = tileEntity.getY();
-        int blockX = (chunkX << 4) + tileEntity.getX();
-        int blockZ = (chunkZ << 4) + tileEntity.getZ();
-
-        int localX = blockX & ChunkData.LOCAL_MASK;
-        int localZ = blockZ & ChunkData.LOCAL_MASK;
+    private boolean processTileEntity(BlockView blockView, int blockOriginX, int blockOriginZ, BaseChunk[] sections, int minimumSectionY,
+                                      long[][] managedBySection, TileEntity tileEntity, MutableBlockLocatable key) {
+        int packedXZ = Byte.toUnsignedInt(tileEntity.getPackedByte());
+        // Modern block entities store local x in the high nibble and local z in the low nibble.
+        int localX = packedXZ >>> 4;
+        int localZ = packedXZ & ChunkData.LOCAL_MASK;
+        int blockX = blockOriginX + localX;
+        int blockY = tileEntity.getYShort();
+        int blockZ = blockOriginZ + localZ;
+        // Arithmetic shifting divides by 16 with the required floor behavior for negative block Y coordinates.
         int sectionIndex = (blockY >> 4) - minimumSectionY;
         key.set(blockX, blockY, blockZ);
-        if (sectionIndex >= 0 && sectionIndex < includedSections.length && includedSections[sectionIndex]) {
-            long[] managed = managedBySection[sectionIndex];
+        if (sectionIndex >= 0 && sectionIndex < sections.length) {
+            long[] managed = managedBySection == null ? null : managedBySection[sectionIndex];
             int packed = ChunkData.packUncheckedGuarded(localX, blockY, localZ);
             if (managed != null && (managed[packed >>> 6] & 1L << packed) != 0L) {
                 TileEntityLocatable<PacketEventsTileEntityReplayData> state = tracked(blockView, key);
                 if (state != null) {
-                    replayData(state).setBlockEntityData(BlockEntityTypes.getById(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), tileEntity.getType()), tileEntity.getNBT());
+                    replayData(state).setBlockEntityData(BlockEntityTypes.getById(clientVersion, tileEntity.getType()), tileEntity.getNBT());
                     return !state.visible();
                 }
                 Logger.warning("Managed chunk block entity was missing from tracked state at " + blockX + "," + blockY + "," + blockZ, 3, AbstractChunkParser.class);
@@ -168,8 +183,8 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
             }
         }
 
-        if (sectionIndex < 0 || sectionIndex >= sections.length || sections[sectionIndex] == null) {
-            Logger.warning("Received chunk block entity outside included section data at " + blockX + "," + blockY + "," + blockZ, 3, AbstractChunkParser.class);
+        if (sectionIndex < 0 || sectionIndex >= sections.length) {
+            Logger.warning("Received chunk block entity outside authoritative section data at " + blockX + "," + blockY + "," + blockZ, 3, AbstractChunkParser.class);
             return true;
         }
         int blockID = sections[sectionIndex].getBlockId(localX, blockY & ChunkData.LOCAL_MASK, localZ);
@@ -194,19 +209,11 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         return replayData;
     }
 
+    @SuppressWarnings("deprecation")
     private Column copyColumn(Column column, TileEntity[] tileEntities) {
-        TileEntity[] replacement = tileEntities == null ? EMPTY_TILE_ENTITIES : tileEntities;
-        if (column.hasBiomeData()) {
-            int[] ints = column.getBiomeDataInts();
-            byte[] bytes = column.getBiomeDataBytes();
-            if (ints.length >= bytes.length) {
-                return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), replacement, column.getHeightMaps(), ints);
-            }
-            return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), replacement, column.getHeightMaps(), bytes);
-        }
         if (modernHeightmaps) {
-            return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), replacement, column.getHeightmaps());
+            return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), tileEntities, column.getHeightmaps());
         }
-        return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), replacement, column.getHeightMaps());
+        return new Column(column.getX(), column.getZ(), column.isFullChunk(), column.getChunks(), tileEntities, column.getHeightMaps());
     }
 }
