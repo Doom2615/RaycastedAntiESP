@@ -190,7 +190,7 @@ public class RaycastedAntiESPCommand {
         @Executes("loaded-chunks")
         void loadedChunksCommand(Player player) {
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            AbstractBlockView<?> pbsm = (AbstractBlockView<?>) playerData.blockView();
+            AbstractBlockView<?, ?> pbsm = (AbstractBlockView<?, ?>) playerData.blockView();
             player.sendMessage(pbsm.loadedChunkCount() +"chunks loaded");
         }
 
