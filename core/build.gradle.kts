@@ -30,6 +30,8 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation(project(":leafpile"))
+    testImplementation(project(":logging"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
