@@ -2,10 +2,11 @@ package games.cubi.raycastedantiesp.core.locatables;
 
 import games.cubi.locatables.Locatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
 
 import java.util.UUID;
 
-public abstract class NettyTileEntity<PacketReplayData extends Clearable> implements TileEntityLocatable<PacketReplayData> {
+public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TileEntityLocatable<PacketReplayData> {
     private volatile boolean visible;
     private volatile int lastChecked;
     private volatile int blockID;
