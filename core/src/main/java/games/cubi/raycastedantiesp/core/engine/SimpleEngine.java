@@ -421,7 +421,8 @@ public abstract class SimpleEngine implements Engine {
     }
 
     private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
-        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, tileEntityLocation -> {
+        long modeToken = blockView.tileEntityCheckModeToken();
+        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, modeToken, tileEntityLocation -> {
             if (tileEntityLocation.world() == null || !tileEntityLocation.world().equals(playerLocation.world())) {
                 timings.incrementTileWorldSkipped();
                 return BlockView.VisibilityResolver.SKIPPED;
