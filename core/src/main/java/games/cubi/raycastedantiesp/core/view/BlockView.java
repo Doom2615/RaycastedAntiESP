@@ -42,8 +42,12 @@ public interface BlockView extends Clearable {
     /** Applies a checked visibility decision and queues any required client transition. */
     void applyTileEntityVisibilityDecision(BlockLocatable location, boolean visible, int currentTick);
 
-    /** Records visibility established by the current outbound packet without queuing another packet. */
-    void recordOutboundTileEntityVisibility(BlockLocatable location, boolean visible);
+    /**
+     * Records visibility established by the current outbound packet without queuing another packet. This also resets
+     * the check timestamp because the transmitted state supersedes the result of any previous visibility check. The
+     * tile entity must be the current state returned by this view's structural-writer operations.
+     */
+    void recordOutboundTileEntityVisibility(TileEntityLocatable<?> tileEntity, boolean visible);
 
     /** Applies a mode change from the structural writer. */
     void applyTileEntityCheckMode(boolean enabled, int currentTick);

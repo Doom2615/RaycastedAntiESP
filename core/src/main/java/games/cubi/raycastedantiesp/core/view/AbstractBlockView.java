@@ -168,8 +168,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public void recordOutboundTileEntityVisibility(BlockLocatable location, boolean visible) {
-        T tileEntity = getTrackedTileEntity(location);
+    public void recordOutboundTileEntityVisibility(TileEntityLocatable<?> tileEntity, boolean visible) {
         if (tileEntity != null) {
             tileEntity.setVisible(visible);
             tileEntity.setLastChecked(TileEntityLocatable.NEVER_CHECKED);
