@@ -76,9 +76,9 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public void updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew) {
+    public T updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew) {
         if (location == null || !ensureTrackedWorld(location.world())) {
-            return;
+            return null;
         }
         SWMRInt2ObjectHashTable<NettyTileEntity<R>> map = knownTileEntitiesByColumnBucket;
         int bucketKey = packColumnBucket(location.chunkX(), location.chunkZ());
@@ -88,7 +88,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
             tileEntity = createTrackedTileEntity(location, blockID, visibleIfNew);
             if (tileEntity == null) {
                 Logger.error("createTrackedTileEntity returned null", 3, AbstractBlockView.class);
-                return;
+                return null;
             }
             if (head == null) {
                 map.put(bucketKey, tileEntity);
@@ -98,6 +98,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         }
         tileEntity.clearExtraData();
         tileEntity.setBlockID(blockID);
+        return tileEntity;
     }
 
     @Override

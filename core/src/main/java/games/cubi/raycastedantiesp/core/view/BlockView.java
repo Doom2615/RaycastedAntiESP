@@ -23,10 +23,12 @@ public interface BlockView extends Clearable {
     boolean isBlockOccluding(BlockLocatable location);
 
     /**
-     * Constructs a new tile entity with the provided id and visibility, or updates the block id for existing tile entities.
-     * This is a structural-writer operation.
+     * Constructs a new tile entity with the provided id and visibility, or updates the block id for an existing tile
+     * entity. This is a structural-writer operation.
+     *
+     * @return the current tracked tile entity, or null when the location cannot be tracked.
      */
-    void updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew);
+    TileEntityLocatable<?> updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew);
 
     /** Structural-writer operation. */
     void removeTileEntity(BlockLocatable location);
