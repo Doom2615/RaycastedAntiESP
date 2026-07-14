@@ -2,8 +2,9 @@ package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
-import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
+import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
+import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 import java.util.Collection;
@@ -11,14 +12,23 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+/**
+ * A per-player block view with one structural writer and concurrent weakly-consistent readers.
+ *
+ * <p>Packet-driven structural mutations, including chunk and tile membership changes, must all be performed by the
+ * same outbound Netty thread. At most one engine worker concurrently traverses a player's view and commits visibility
+ * decisions; visibility fields and the transition queue are safe for that Netty/engine overlap.</p>
+ */
 public interface BlockView extends Clearable {
     boolean isBlockOccluding(BlockLocatable location);
 
     /**
      * Constructs a new tile entity with the provided id and visibility, or updates the block id for existing tile entities.
+     * This is a structural-writer operation.
      */
     void updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew);
 
+    /** Structural-writer operation. */
     void removeTileEntity(BlockLocatable location);
 
     TileEntityLocatable<?> getTrackedTileEntity(BlockLocatable location);
@@ -27,7 +37,20 @@ public interface BlockView extends Clearable {
 
     boolean isVisible(BlockLocatable location, int currentTick);
 
-    void setVisibility(BlockLocatable location, boolean visible, int currentTick);
+    /** Applies a checked visibility decision and queues any required client transition. */
+    void applyTileEntityVisibilityDecision(BlockLocatable location, boolean visible, int currentTick);
+
+    /** Records visibility established by the current outbound packet without queuing another packet. */
+    void recordOutboundTileEntityVisibility(BlockLocatable location, boolean visible);
+
+    /** Applies a mode change from the structural writer. */
+    void applyTileEntityCheckMode(boolean enabled, int currentTick);
+
+    /** Returns an opaque enabled-state/generation snapshot for rejecting results that cross a mode change. */
+    long tileEntityCheckModeToken();
+
+    /** Returns whether {@code modeToken} is still the current enabled generation. */
+    boolean isCurrentEnabledTileEntityMode(long modeToken);
 
     Collection<BlockLocatable> getKnownTileEntities();
 
@@ -52,19 +75,33 @@ public interface BlockView extends Clearable {
      *
      * @return number of tile entities passed to {@code action}.
      */
-    int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, VisibilityResolver action);
+    int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, long modeToken, VisibilityResolver action);
 
     boolean hasPendingTransitions();
 
     List<BlockViewTransition> drainTransitions();
 
-    void upsertBlock(UUID world, int x, int y, int z, boolean occluding);
+    /** Structural-writer operation. */
+    void upsertBlock(UUID world, int x, int y, int z, int blockID);
 
+    /** Structural-writer operation. */
     void removeChunk(UUID world, int chunkX, int chunkZ);
 
+    /** Structural-writer operation. */
     void removeChunkSection(UUID world, int chunkX, int chunkY, int chunkZ);
 
-    void replaceChunkSection(UUID world, int chunkX, int chunkY, int chunkZ, OccludingChunkData occludingBlocks);
+    /**
+     * Removes tracked tile entities absent from authoritative included sections. Unincluded sections retain their
+     * previous state; a null entry in {@code presentBySection} means the included section has no managed tiles.
+     * This is a structural-writer operation.
+     */
+    void pruneTileEntitiesAbsentFromIncludedChunkSections(UUID world, int chunkX, int chunkZ, int minimumSectionY, boolean[] includedSections, long[][] presentBySection);
+
+    /** Structural-writer operation. */
+    void replaceChunkSection(UUID world, int chunkX, int chunkY, int chunkZ, BlockChunkData data);
+
+    /** Structural-writer operation. */
+    void replaceChunkSectionOcclusion(UUID world, int chunkX, int chunkY, int chunkZ, OccludingChunkData data);
 
     default <T> T cast() {
         return (T) this;
