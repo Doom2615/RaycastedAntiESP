@@ -34,7 +34,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         this.visible = visible;
         this.blockID = blockID;
         this.world = world;
-        lastChecked = 0;
+        lastChecked = NEVER_CHECKED;
     }
 
     @Override
