@@ -297,8 +297,8 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public void pruneTileEntitiesAbsentFromIncludedChunkSections(UUID world, int chunkX, int chunkZ, int minimumSectionY, boolean[] includedSections, long[][] presentBySection) {
-        if (!isTrackedWorld(world) || includedSections.length != presentBySection.length) {
+    public void pruneTileEntitiesAbsentFromChunkSections(UUID world, int chunkX, int chunkZ, int minimumSectionY, int sectionCount, long[][] presentBySection) {
+        if (!isTrackedWorld(world) || sectionCount < 0 || (presentBySection != null && presentBySection.length != sectionCount)) {
             return;
         }
         SWMRInt2ObjectHashTable<NettyTileEntity<R>> map = knownTileEntitiesByColumnBucket;
@@ -310,12 +310,16 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
             NettyTileEntity<R> next = current.nextAcquire();
             if (current.chunkX() == chunkX && current.chunkZ() == chunkZ) {
                 int sectionIndex = current.chunkY() - minimumSectionY;
-                // A section omitted from the packet is not authoritative, so its previous tracking state is retained.
-                if (sectionIndex >= 0 && sectionIndex < includedSections.length && includedSections[sectionIndex]) {
-                    long[] present = presentBySection[sectionIndex];
+                long[] present = sectionIndex >= 0 && sectionIndex < sectionCount && presentBySection != null
+                        ? presentBySection[sectionIndex]
+                        : null;
+                if (sectionIndex < 0 || sectionIndex >= sectionCount || present == null) {
+                    currentHead = removeNode(map, bucketKey, currentHead, current);
+                } else {
                     int packed = packUncheckedGuarded(current.blockX(), current.blockY(), current.blockZ());
-                    // Guarded packing masks full coordinates to local x/y/z. Null means this included section has no managed tiles.
-                    if (present == null || (present[packed >>> 6] & 1L << packed) == 0L) {
+                    // Guarded packing masks the full coordinates to local x/y/z. The high bits choose the 64-bit word;
+                    // Java masks the long shift distance to the low six bits, selecting the bit within that word.
+                    if ((present[packed >>> 6] & 1L << packed) == 0L) {
                         currentHead = removeNode(map, bucketKey, currentHead, current);
                     }
                 }

@@ -97,11 +97,11 @@ public interface BlockView extends Clearable {
     void removeChunkSection(UUID world, int chunkX, int chunkY, int chunkZ);
 
     /**
-     * Removes tracked tile entities absent from authoritative included sections. Unincluded sections retain their
-     * previous state; a null entry in {@code presentBySection} means the included section has no managed tiles.
-     * This is a structural-writer operation.
+     * Removes tracked tile entities absent from an authoritative chunk column. A null {@code presentBySection} means
+     * the entire column has no managed tiles; a null entry means that section has none. This is a structural-writer
+     * operation.
      */
-    void pruneTileEntitiesAbsentFromIncludedChunkSections(UUID world, int chunkX, int chunkZ, int minimumSectionY, boolean[] includedSections, long[][] presentBySection);
+    void pruneTileEntitiesAbsentFromChunkSections(UUID world, int chunkX, int chunkZ, int minimumSectionY, int sectionCount, long[][] presentBySection);
 
     /** Structural-writer operation. */
     void replaceChunkSection(UUID world, int chunkX, int chunkY, int chunkZ, BlockChunkData data);
