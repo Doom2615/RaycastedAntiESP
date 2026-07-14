@@ -1,31 +1,52 @@
 package games.cubi.raycastedantiesp.core.chunks;
 
-// Literally just because OccludingChunkData as a base interface is weird, especially for instances of BlockChunkData.
-public non-sealed interface ChunkData extends OccludingChunkData{
-    static final int CHUNK_SIZE = 16;
-    static final int LOCAL_MASK = CHUNK_SIZE - 1;
-    static final int BLOCK_COUNT = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-    static final int WORD_COUNT = BLOCK_COUNT / Long.SIZE;
+public final class ChunkData {
+    public static final int CHUNK_SIZE = 16;
+    public static final int LOCAL_MASK = CHUNK_SIZE - 1;
+    public static final int BLOCK_COUNT = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+    public static final int WORD_COUNT = BLOCK_COUNT / Long.SIZE;
 
-    static int pack(int x, int y, int z) {
-        return (x & LOCAL_MASK) | ((y & LOCAL_MASK) << 4) | ((z & LOCAL_MASK) << 8);
+    private ChunkData() {
     }
 
-    static int unpackX(int packed) {
+    public static int packLocalChecked(int x, int y, int z) {
+        checkLocalCoordinate(x, "x");
+        checkLocalCoordinate(y, "y");
+        checkLocalCoordinate(z, "z");
+        return packUncheckedGuarded(x, y, z);
+    }
+
+    /**
+     * Packs the local coordinates into a single integer without checking bounds. Coordinates outside the range will be correctly packed.
+     */
+    public static int packUncheckedGuarded(int x, int y, int z) {
+        return (z & LOCAL_MASK) << 8 | (y & LOCAL_MASK) << 4 | (x & LOCAL_MASK);
+    }
+
+    public static int unpackX(int packed) {
+        checkPacked(packed);
         return packed & LOCAL_MASK;
     }
 
-    static int unpackY(int packed) {
-        return (packed >> 4) & LOCAL_MASK;
+    public static int unpackY(int packed) {
+        checkPacked(packed);
+        return packed >> 4 & LOCAL_MASK;
     }
 
-    static int unpackZ(int packed) {
-        return (packed >> 8) & LOCAL_MASK;
+    public static int unpackZ(int packed) {
+        checkPacked(packed);
+        return packed >> 8 & LOCAL_MASK;
     }
 
-    static void checkPacked(int packed) {
+    public static void checkPacked(int packed) {
         if (packed < 0 || packed >= BLOCK_COUNT) {
-            throw new IndexOutOfBoundsException("Packed block position out of chunk section range: " + packed);
+            throw new IllegalArgumentException("packed local block index must be in [0, " + (BLOCK_COUNT - 1) + "], but was " + packed);
+        }
+    }
+
+    private static void checkLocalCoordinate(int coordinate, String name) {
+        if (coordinate < 0 || coordinate >= CHUNK_SIZE) {
+            throw new IllegalArgumentException(name + " local coordinate must be in [0, " + LOCAL_MASK + "], but was " + coordinate);
         }
     }
 }

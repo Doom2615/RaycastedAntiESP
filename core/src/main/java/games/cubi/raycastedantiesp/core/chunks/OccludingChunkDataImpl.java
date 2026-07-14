@@ -35,7 +35,7 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
 
     @Override
     public boolean isOccludingLocal(int x, int y, int z) {
-        int packed = ChunkData.pack(x, y, z);
+        int packed = ChunkData.packLocalChecked(x, y, z);
         // >>> 6 divides the packed block index by 64 to select the containing long.
         int wordIndex = packed >>> 6;
         // 1L << packed creates a mask with only the packed block's bit set.
@@ -47,7 +47,7 @@ public final class OccludingChunkDataImpl implements OccludingChunkData {
 
     @Override
     public OccludingChunkData setOccluding(int x, int y, int z, boolean occluding) {
-        int packed = ChunkData.pack(x, y, z);
+        int packed = ChunkData.packLocalChecked(x, y, z);
         // >>> 6 divides the packed block index by 64 to select the containing long. Avoids signed division; probably an unnecessary optimisation but why not
         int wordIndex = packed >>> 6;
         // 1L << packed creates a mask for only the packed block's bit.

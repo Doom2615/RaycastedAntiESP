@@ -1,6 +1,11 @@
 package games.cubi.raycastedantiesp.core.chunks;
 
-public interface BlockChunkData extends ChunkData {
+import games.cubi.raycastedantiesp.core.chunks.blocks.BlockChunkDataBuilder;
+import games.cubi.raycastedantiesp.core.chunks.blocks.SingleBlockChunkData;
+
+import java.util.function.IntUnaryOperator;
+
+public interface BlockChunkData extends ChunkOcclusionView {
     /**
      * char is used to denote an unsigned 16-bit integer.
      */
@@ -9,9 +14,24 @@ public interface BlockChunkData extends ChunkData {
     /**
      * char is used to denote an unsigned 16-bit integer.
      */
-    BlockChunkData setBlockID(int x, int y, int z, char blockID);
+    BlockChunkData setBlockID(int x, int y, int z, char blockID, BlockInfoResolver blockInfoResolver);
 
-    default OccludingChunkData setOccluding(int x, int y, int z, boolean occluding) {
-        throw new UnsupportedOperationException("BlockChunkData implementations must have block data set, not just occlusion data. Use setBlockID instead.");
+    static BlockChunkData filled(char blockID, BlockInfoResolver blockInfoResolver) {
+        return new SingleBlockChunkData(blockID, blockInfoResolver.isOccluding(blockID));
+    }
+
+    /**
+     * Builds chunk data from a source palette. The index reader receives core-packed positions and returns an index into {@code sourcePalette}.
+     * Unused source entries are discarded before choosing the smallest representation.
+     */
+    static BlockChunkData copyOfPalette(char[] sourcePalette, IntUnaryOperator paletteIndexAtPacked, BlockInfoResolver blockInfoResolver) {
+        return BlockChunkDataBuilder.copyOfPalette(sourcePalette, paletteIndexAtPacked, blockInfoResolver);
+    }
+
+    /**
+     * Builds chunk data from a block-state reader. The reader receives core-packed positions.
+     */
+    static BlockChunkData copyOfStates(IntUnaryOperator blockStateAtPacked, BlockInfoResolver blockInfoResolver) {
+        return BlockChunkDataBuilder.copyOfStates(blockStateAtPacked, blockInfoResolver);
     }
 }
