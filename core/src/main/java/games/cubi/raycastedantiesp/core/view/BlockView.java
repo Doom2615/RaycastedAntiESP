@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 public interface BlockView extends Clearable {
     boolean isBlockOccluding(BlockLocatable location);
 
+    boolean isBlockOccluding(int x, int y, int z);
+
     /**
      * Constructs a new tile entity with the provided id and visibility, or updates the block id for an existing tile
      * entity. This is a structural-writer operation.

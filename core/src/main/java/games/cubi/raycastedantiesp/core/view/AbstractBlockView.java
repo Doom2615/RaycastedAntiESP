@@ -56,19 +56,18 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     protected abstract T createTrackedTileEntity(UUID world, int x, int y, int z, int blockID);
 
 
-    public boolean isBlockOccluding(UUID world, int x, int y, int z) {
-        if (!isTrackedWorld(world)) {
-            return false;
-        }
-
+    @Override
+    public boolean isBlockOccluding(int x, int y, int z) {
         return chunks.isOccluding(x, y, z);
     }
 
     @Override
     public boolean isBlockOccluding(BlockLocatable location) {
-        return location != null
-                && location.world() != null
-                && isBlockOccluding(location.world(), location.blockX(), location.blockY(), location.blockZ());
+        if (!isTrackedWorld(location.world())) {
+            return false;
+        }
+
+        return isBlockOccluding(location.blockX(), location.blockY(), location.blockZ());
     }
 
     public int loadedChunkCount() {
