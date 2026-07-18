@@ -167,7 +167,7 @@ public class RaycastedAntiESPCommand {
                 unitDirection.setZ(Math.random() - 0.5);
                 unitDirection.normalize();
                 unitDirection.scalarMultiply(50);
-                locatables[i] = playerLocatable.clonePlainAndCentreIfBlockLocation().add(unitDirection);
+                locatables[i] = new MutableLocatableImpl(playerLocatable.world(), playerLocatable.x(), playerLocatable.y(), playerLocatable.z()).add(unitDirection);
             }
             Bukkit.getAsyncScheduler().runNow(RaycastedAntiESP.get(), (ignored) -> {
                 int successfulRays = 0;
