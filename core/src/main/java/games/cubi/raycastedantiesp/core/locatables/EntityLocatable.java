@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
 import games.cubi.locatables.api.ImmutableLocatable;
-import games.cubi.locatables.api.MutableLocatable;
+import games.cubi.locatables.api.MutableFloatingLocatable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * Per-player platform-independent representation of an entity
  */
-public interface EntityLocatable<EntityType, PacketReplayData> extends MutableLocatable {
+public interface EntityLocatable<EntityType, PacketReplayData> extends MutableFloatingLocatable {
 
     int entityID();
 

@@ -106,7 +106,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
 
     @Override
     public LocatableType getType() {
-        return LocatableType.NettyTileEntity;
+        return LocatableType.ExternalImmutableBlock;
     }
 
     @Override
@@ -119,16 +119,6 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         if (extraData != null) {
             extraData.clear();
         }
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return isEqualTo(other);
-    }
-
-    @Override
-    public int hashCode() {
-        return blockHash();
     }
 
     @Override

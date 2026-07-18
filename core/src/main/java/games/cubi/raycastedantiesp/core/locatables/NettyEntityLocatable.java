@@ -1,9 +1,8 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
 import games.cubi.locatables.api.ImmutableLocatable;
-import games.cubi.locatables.api.MutableLocatable;
+import games.cubi.locatables.api.MutableFloatingLocatable;
 import games.cubi.locatables.implementations.ImmutableLocatableImpl;
-import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
@@ -77,7 +76,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
 
     @Override
     public LocatableType getType() {
-        return LocatableType.NettyEntity;
+        return LocatableType.ExternalMutable;
     }
 
     @Override
@@ -314,54 +313,49 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     }
 
     @Override
-    public MutableLocatable clonePlainAndCentreIfBlockLocation() {
-        return new MutableLocatableImpl(world, x, y, z);
-    }
-
-    @Override
-    public MutableLocatable setX(double x) {
+    public MutableFloatingLocatable setX(double x) {
         this.x = x;
         return this;
     }
 
     @Override
-    public MutableLocatable setY(double y) {
+    public MutableFloatingLocatable setY(double y) {
         this.y = y;
         return this;
     }
 
     @Override
-    public MutableLocatable setZ(double z) {
+    public MutableFloatingLocatable setZ(double z) {
         this.z = z;
         return this;
     }
 
     @Override
-    public MutableLocatable setX(int x) {
+    public MutableFloatingLocatable setX(int x) {
         this.x = x;
         return this;
     }
 
     @Override
-    public MutableLocatable setY(int y) {
+    public MutableFloatingLocatable setY(int y) {
         this.y = y;
         return this;
     }
 
     @Override
-    public MutableLocatable setZ(int z) {
+    public MutableFloatingLocatable setZ(int z) {
         this.z = z;
         return this;
     }
 
     @Override
-    public MutableLocatable setWorld(UUID world) {
+    public MutableFloatingLocatable setWorld(UUID world) {
         this.world = world;
         return this;
     }
 
     @Override
-    public MutableLocatable set(double x, double y, double z) {
+    public MutableFloatingLocatable set(double x, double y, double z) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -370,7 +364,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     }
 
     @Override
-    public MutableLocatable set(int x, int y, int z) {
+    public MutableFloatingLocatable set(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -379,7 +373,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     }
 
     @Override
-    public MutableLocatable add(double x, double y, double z) {
+    public MutableFloatingLocatable add(double x, double y, double z) {
         this.x += x;
         this.y += y;
         this.z += z;
@@ -413,16 +407,6 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         passengerIDs = null;
         leashedIDs = null;
         leasherID = NO_LEASHER;
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return isEqualTo(other);
-    }
-
-    @Override
-    public int hashCode() {
-        return makeHash();
     }
 
     @Override

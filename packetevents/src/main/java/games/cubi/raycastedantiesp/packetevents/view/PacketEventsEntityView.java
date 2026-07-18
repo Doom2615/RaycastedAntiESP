@@ -3,6 +3,8 @@ package games.cubi.raycastedantiesp.packetevents.view;
 import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
 import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.implementations.ImmutableLocatableImpl;
+import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
@@ -120,7 +122,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
         if (entity == null) {
             return null;
         }
-        return entity.clonePlainAndCentreIfBlockLocation().set(entity.x(), entity.y() + 0.5, entity.z(), entity.world());
+        return new ImmutableLocatableImpl(entity.world(), entity.x(), entity.y() + 0.5, entity.z());
     }
 
     @Override

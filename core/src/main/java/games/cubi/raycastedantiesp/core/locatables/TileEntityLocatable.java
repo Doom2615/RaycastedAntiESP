@@ -1,11 +1,9 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.api.BlockLocatable;
-import games.cubi.locatables.api.ImmutableLocatable;
-import games.cubi.locatables.api.MutableLocatable;
+import games.cubi.locatables.api.ImmutableBlockLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
-public interface TileEntityLocatable<T> extends BlockLocatable, ImmutableLocatable, Clearable {
+public interface TileEntityLocatable<T> extends ImmutableBlockLocatable, Clearable {
     int NEVER_CHECKED = Integer.MIN_VALUE;
 
     boolean visible();
@@ -20,14 +18,4 @@ public interface TileEntityLocatable<T> extends BlockLocatable, ImmutableLocatab
     T extraData();
     TileEntityLocatable<T> setExtraData(T extraData);
     void clearExtraData();
-
-    @Override
-    default boolean isMutable() {
-        return false;
-    }
-
-    @Override
-    default MutableLocatable castToMutableOrNull() {
-        return null;
-    }
 }

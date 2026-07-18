@@ -11,6 +11,7 @@ package games.cubi.raycastedantiesp.paper.commands;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.MutableFloatingLocatable;
 import games.cubi.locatables.api.MutableLocatable;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.logs.Logger;
@@ -160,12 +161,12 @@ public class RaycastedAntiESPCommand {
             Locatable[] locatables = new Locatable[10000];
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
             Locatable playerLocatable = playerData.ownLocation();
-            MutableLocatable unitDirection = new MutableLocatableImpl(playerLocatable.world(), 0, 0, 0);
+            MutableFloatingLocatable unitDirection = new MutableLocatableImpl(playerLocatable.world(), 0, 0, 0);
             for (int i = 0; i < locatables.length; i++) {
                 unitDirection.setX(Math.random() - 0.5);
                 unitDirection.setY(Math.random() - 0.5);
                 unitDirection.setZ(Math.random() - 0.5);
-                unitDirection.normalize();
+                unitDirection.normalise();
                 unitDirection.scalarMultiply(50);
                 locatables[i] = new MutableLocatableImpl(playerLocatable.world(), playerLocatable.x(), playerLocatable.y(), playerLocatable.z()).add(unitDirection);
             }

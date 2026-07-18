@@ -25,6 +25,11 @@ public class PacketEventsEntity extends NettyEntityLocatable<EntityType, PacketE
         if (this == other) return true;
         if (!(other instanceof PacketEventsEntity that)) return false;
         if (!this.equals(other)) return false;
+        // check xyz
+        if (!this.world().equals(that.world())) return false;
+        if (this.x() != that.x()) return false;
+        if (this.y() != that.y()) return false;
+        if (this.z() != that.z()) return false;
 
         if (entityID() != that.entityID()) return false;
         if (!entityUUID().equals(that.entityUUID())) return false;
