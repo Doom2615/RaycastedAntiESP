@@ -1,4 +1,4 @@
-package games.cubi.raycastedantiesp.packetevents;
+package games.cubi.raycastedantiesp.core.chunks;
 
 import org.jetbrains.annotations.Contract;
 

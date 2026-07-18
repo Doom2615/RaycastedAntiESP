@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.paper.packets;
 
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.packetevents.BlockInfoResolver;
+import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;

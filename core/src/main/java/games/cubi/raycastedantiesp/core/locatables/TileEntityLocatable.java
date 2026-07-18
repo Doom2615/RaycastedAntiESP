@@ -6,6 +6,8 @@ import games.cubi.locatables.MutableLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 public interface TileEntityLocatable<T> extends BlockLocatable, ImmutableLocatable, Clearable {
+    int NEVER_CHECKED = Integer.MIN_VALUE;
+
     boolean visible();
     TileEntityLocatable<T> setVisible(boolean visible);
 
