@@ -61,9 +61,12 @@ public class PlayerData {
         ownLocation.set(x, y, z, world);
     }
 
+    /**
+     * Returns a live, thread-safe view of the player's current location.
+     * Casting the result to a mutable type and modifying it is unsupported.
+     */
     public Locatable ownLocation() {
-        ThreadSafeLocatable existing = ownLocation;
-        return existing == null ? null : existing.clonePlainAndCentreIfBlockLocation();
+        return ownLocation;
     }
 
     public UUID getPlayerUUID() {
