@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.raycast;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 
 public interface ParticleSpawner {
 

@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.raycastedantiesp.core.locatables.EntityLocatable;
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 

@@ -8,7 +8,7 @@
 
 package games.cubi.raycastedantiesp.core.view.controller;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;

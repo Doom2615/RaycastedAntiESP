@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.core.view;
 
 import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRInt2ObjectHashTable;
-import games.cubi.locatables.BlockLocatable;
+import games.cubi.locatables.api.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;

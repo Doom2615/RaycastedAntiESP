@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.ImmutableLocatable;
-import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.MutableLocatable;
 import games.cubi.locatables.implementations.ImmutableLocatableImpl;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.raycastedantiesp.core.players.PlayerData;

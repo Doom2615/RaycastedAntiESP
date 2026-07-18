@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.ImmutableLocatable;
-import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.MutableLocatable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;

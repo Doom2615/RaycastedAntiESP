@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.packetevents.view;
 
 import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;

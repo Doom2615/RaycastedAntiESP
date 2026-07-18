@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
 

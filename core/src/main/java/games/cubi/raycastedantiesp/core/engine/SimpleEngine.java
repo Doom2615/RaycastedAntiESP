@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.engine;
 
-import games.cubi.locatables.ImmutableLocatable;
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.config.DebugConfig;

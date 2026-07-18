@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.view.chunks;
 
-import games.cubi.locatables.BlockLocatable;
+import games.cubi.locatables.api.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;

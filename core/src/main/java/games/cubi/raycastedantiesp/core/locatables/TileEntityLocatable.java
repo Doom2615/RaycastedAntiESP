@@ -1,8 +1,8 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.BlockLocatable;
-import games.cubi.locatables.ImmutableLocatable;
-import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.api.BlockLocatable;
+import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.MutableLocatable;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 public interface TileEntityLocatable<T> extends BlockLocatable, ImmutableLocatable, Clearable {

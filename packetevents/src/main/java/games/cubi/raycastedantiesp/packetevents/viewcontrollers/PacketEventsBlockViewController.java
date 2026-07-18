@@ -8,8 +8,8 @@ import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityT
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
-import games.cubi.locatables.BlockLocatable;
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.BlockLocatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.locatables.implementations.MutableBlockLocatable;
 import games.cubi.logs.Logger;

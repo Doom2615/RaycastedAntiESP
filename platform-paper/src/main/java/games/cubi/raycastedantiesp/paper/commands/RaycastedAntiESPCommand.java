@@ -10,8 +10,8 @@ package games.cubi.raycastedantiesp.paper.commands;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
-import games.cubi.locatables.Locatable;
-import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.MutableLocatable;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;

@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.paper;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.raycastedantiesp.core.raycast.ParticleSpawner;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;

@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
