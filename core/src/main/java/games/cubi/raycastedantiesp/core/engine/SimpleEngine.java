@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.engine;
 
-import games.cubi.locatables.ImmutableLocatable;
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.config.DebugConfig;
@@ -421,7 +421,8 @@ public abstract class SimpleEngine implements Engine {
     }
 
     private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
-        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, tileEntityLocation -> {
+        long modeToken = blockView.tileEntityCheckModeToken();
+        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, modeToken, tileEntityLocation -> {
             if (tileEntityLocation.world() == null || !tileEntityLocation.world().equals(playerLocation.world())) {
                 timings.incrementTileWorldSkipped();
                 return BlockView.VisibilityResolver.SKIPPED;

@@ -10,12 +10,14 @@ package games.cubi.raycastedantiesp.paper.commands;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
-import games.cubi.locatables.Locatable;
-import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.MutableFloatingSpatial;
+import games.cubi.locatables.api.Spatial;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
+import games.cubi.locatables.implementations.MutableSpatialImpl;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
-import games.cubi.raycastedantiesp.core.locatables.EntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.TrackedEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.raycast.RaycastUtil;
@@ -141,12 +143,12 @@ public class RaycastedAntiESPCommand {
             Entity closestEntity = player.getNearbyEntities(10,10,10).getFirst();
             if (closestEntity == null) return;
             player.sendRichMessage("Closest entity is "+closestEntity.getName());
-            Locatable entityLocatable = playerData.entityView().getLocation(closestEntity.getUniqueId());
+            Spatial entityPosition = playerData.entityView().getPosition(closestEntity.getUniqueId());
             Location bukkitLoc = closestEntity.getLocation().clone();
-            player.sendRichMessage("Entity location according to PacketEvents is "+entityLocatable);
+            player.sendRichMessage("Entity location according to PacketEvents is "+entityPosition);
             player.sendRichMessage("Entity location according to Bukkit is "+bukkitLoc);
-            double driftX = Math.abs(entityLocatable.x() - bukkitLoc.getX());
-            double driftZ = Math.abs(entityLocatable.z() - bukkitLoc.getZ());
+            double driftX = Math.abs(entityPosition.x() - bukkitLoc.getX());
+            double driftZ = Math.abs(entityPosition.z() - bukkitLoc.getZ());
             if (driftX < 0.0005) driftX = 0;
             if (driftZ < 0.0005) driftZ = 0;
             Logger.debug("Drift is X: "+driftX+" Z: "+driftZ);
@@ -160,20 +162,20 @@ public class RaycastedAntiESPCommand {
             Locatable[] locatables = new Locatable[10000];
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
             Locatable playerLocatable = playerData.ownLocation();
-            MutableLocatable unitDirection = new MutableLocatableImpl(playerLocatable.world(), 0, 0, 0);
+            MutableFloatingSpatial unitDirection = new MutableSpatialImpl(0, 0, 0);
             for (int i = 0; i < locatables.length; i++) {
                 unitDirection.setX(Math.random() - 0.5);
                 unitDirection.setY(Math.random() - 0.5);
                 unitDirection.setZ(Math.random() - 0.5);
-                unitDirection.normalize();
+                unitDirection.normalise();
                 unitDirection.scalarMultiply(50);
-                locatables[i] = playerLocatable.clonePlainAndCentreIfBlockLocation().add(unitDirection);
+                locatables[i] = new MutableLocatableImpl(playerLocatable.world(), playerLocatable.x(), playerLocatable.y(), playerLocatable.z()).add(unitDirection);
             }
             Bukkit.getAsyncScheduler().runNow(RaycastedAntiESP.get(), (ignored) -> {
                 int successfulRays = 0;
                 long startTime = System.nanoTime();
                 for (Locatable locatable : locatables) {
-                    if (RaycastUtil.raycast(playerData, playerLocatable, locatable, 3, 0, 100, false, playerData.blockView(), 1, null)) successfulRays++;
+                    if (RaycastUtil.raycast(playerLocatable, locatable, 3, 0, 100, false, playerData.blockView(), 1, null)) successfulRays++;
                 }
                 long endTime = System.nanoTime();
                 long duration = endTime - startTime;
@@ -190,14 +192,14 @@ public class RaycastedAntiESPCommand {
         @Executes("loaded-chunks")
         void loadedChunksCommand(Player player) {
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            AbstractBlockView<?> pbsm = (AbstractBlockView<?>) playerData.blockView();
+            AbstractBlockView<?, ?> pbsm = (AbstractBlockView<?, ?>) playerData.blockView();
             player.sendMessage(pbsm.loadedChunkCount() +"chunks loaded");
         }
 
         @Executes("entity-id")
         void getFromEntityID(int entityID, Player player) {
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            EntityLocatable<?, ?> entityLocatable = playerData.entityView().getEntity(entityID);
+            TrackedEntity<?, ?> entityLocatable = playerData.entityView().getEntity(entityID);
             Entity bukkitEntity = SpigotConversionUtil.getEntityById(player.getWorld(), entityID);
             player.sendRichMessage("Entity with ID " + entityID + ":");
             player.sendRichMessage("According to Bukkit: " + bukkitEntity);

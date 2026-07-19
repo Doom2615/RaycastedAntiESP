@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
  * For runnable tasks which should be run immediately after an entity is spawned.
  */
 public interface EntitySpawnTask extends Runnable {
-    int TICKS_BEFORE_EVICTION = 3;
+    int TICKS_BEFORE_EVICTION = 16;
 
     int getSubmittedTick();
 

@@ -1,20 +1,19 @@
 package games.cubi.raycastedantiesp.packetevents.view;
 
-import games.cubi.locatables.BlockLocatable;
-import games.cubi.locatables.implementations.ImmutableBlockLocatable;
+import games.cubi.locatables.api.BlockSpatial;
+import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsTileEntity;
+import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;
 
-import java.util.UUID;
-
-public class PacketEventsBlockView extends AbstractBlockView<PacketEventsTileEntity> {
-    @Override
-    protected PacketEventsTileEntity createTrackedTileEntity(BlockLocatable location, int blockID, boolean visible) {
-        return new PacketEventsTileEntity(location, visible, 0, blockID);
+public class PacketEventsBlockView extends AbstractBlockView<PacketEventsTileEntityReplayData, PacketEventsTileEntity> {
+    public PacketEventsBlockView(BlockInfoResolver blockInfoResolver, boolean trackAllBlocks) {
+        super(blockInfoResolver, trackAllBlocks);
     }
 
     @Override
-    protected PacketEventsTileEntity createTrackedTileEntity(UUID world, int x, int y, int z, int blockID) {
-        return new PacketEventsTileEntity(world, x, y, z, false, blockID);
+    protected PacketEventsTileEntity createTrackedTileEntity(BlockSpatial position, int blockID, boolean visible) {
+        return new PacketEventsTileEntity(position, visible, TrackedTileEntity.NEVER_CHECKED, blockID);
     }
 }

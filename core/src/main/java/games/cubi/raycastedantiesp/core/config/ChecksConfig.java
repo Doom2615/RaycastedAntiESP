@@ -22,7 +22,6 @@ public record ChecksConfig(PlayerConfig playerConfig, EntityConfig entityConfig,
     public boolean hasRestartOnlyChanges(ChecksConfig startup) {
         return playerConfig.enabled() != startup.playerConfig.enabled()
                 || entityConfig.enabled() != startup.entityConfig.enabled()
-                || tileEntityConfig.enabled() != startup.tileEntityConfig.enabled()
                 || chunkSectionConfig.enabled() != startup.chunkSectionConfig.enabled();
     }
 }
