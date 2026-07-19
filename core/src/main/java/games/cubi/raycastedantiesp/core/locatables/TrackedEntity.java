@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.api.ImmutableLocatable;
-import games.cubi.locatables.api.MutableFloatingLocatable;
+import games.cubi.locatables.api.ImmutableSpatial;
+import games.cubi.locatables.api.MutableFloatingSpatial;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -9,47 +9,47 @@ import java.util.UUID;
 /**
  * Per-player platform-independent representation of an entity
  */
-public interface EntityLocatable<EntityType, PacketReplayData> extends MutableFloatingLocatable {
+public interface TrackedEntity<EntityType, PacketReplayData> extends MutableFloatingSpatial {
 
     int entityID();
 
     UUID entityUUID();
 
     boolean visible();
-    EntityLocatable<?, ?> setVisible(boolean visible);
+    TrackedEntity<?, ?> setVisible(boolean visible);
 
     int lastChecked();
-    EntityLocatable<?, ?> setLastChecked(int lastChecked);
+    TrackedEntity<?, ?> setLastChecked(int lastChecked);
 
     boolean clientVisible();
-    EntityLocatable<?, ?> setClientVisible(boolean clientVisible);
+    TrackedEntity<?, ?> setClientVisible(boolean clientVisible);
 
     boolean isSelfEntity();
 
     float yaw();
-    EntityLocatable<?, ?> setYaw(float yaw);
+    TrackedEntity<?, ?> setYaw(float yaw);
 
     float pitch();
-    EntityLocatable<?, ?> setPitch(float pitch);
+    TrackedEntity<?, ?> setPitch(float pitch);
 
     float headYaw();
-    EntityLocatable<?, ?> setHeadYaw(float headYaw);
+    TrackedEntity<?, ?> setHeadYaw(float headYaw);
 
     double velocityX();
     double velocityY();
     double velocityZ();
-    EntityLocatable<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ);
+    TrackedEntity<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ);
 
     boolean onGround();
-    EntityLocatable<?, ?> setOnGround(boolean onGround);
+    TrackedEntity<?, ?> setOnGround(boolean onGround);
 
     EntityType entityType();
 
     int entityData();
-    EntityLocatable<?, ?> setEntityData(int entityData);
+    TrackedEntity<?, ?> setEntityData(int entityData);
 
     int[] passengerIDs();
-    EntityLocatable<?, ?> setPassengerIDs(int[] passengerIDs);
+    TrackedEntity<?, ?> setPassengerIDs(int[] passengerIDs);
 
     void setVehicleID(int vehicleID);
     int vehicleID();
@@ -61,9 +61,9 @@ public interface EntityLocatable<EntityType, PacketReplayData> extends MutableFl
     void setLeashingEntity(int leashingEntityID);
 
     PacketReplayData packetReplayData();
-    EntityLocatable<?, ?> setPacketReplayData(PacketReplayData packetReplayData);
+    TrackedEntity<?, ?> setPacketReplayData(PacketReplayData packetReplayData);
 
-    ImmutableLocatable getOffsetEntityLocation();
+    ImmutableSpatial getOffsetPosition();
 
     /**
      * For use when the player disconnects, clears all data.
