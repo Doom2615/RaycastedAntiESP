@@ -76,6 +76,7 @@ public abstract class PacketEntityViewController<P> {
             playerData.entityView().clear();
             playerData.playerView().clear();
             nettyData.clearPendingReconciliationState();
+            nettyData.getSelfEntity().clear();
         }
         nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
     }
