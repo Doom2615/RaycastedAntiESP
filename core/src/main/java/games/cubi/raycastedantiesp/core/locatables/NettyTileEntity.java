@@ -1,25 +1,20 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
-import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
 
-import java.util.UUID;
-
-public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TileEntityLocatable<PacketReplayData> {
+public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TrackedTileEntity<PacketReplayData> {
     private volatile boolean visible;
     private volatile int lastChecked;
     private volatile int blockID;
     private volatile PacketReplayData extraData;
 
     private final int x, y, z;
-    private final UUID world;
-
-    public NettyTileEntity(Locatable location, boolean visible, int lastChecked, int blockID) {
-        x = location.blockX();
-        y = location.blockY();
-        z = location.blockZ();
-        world = location.world();
+    public NettyTileEntity(BlockSpatial position, boolean visible, int lastChecked, int blockID) {
+        x = position.blockX();
+        y = position.blockY();
+        z = position.blockZ();
 
         this.blockID = blockID;
 
@@ -27,13 +22,12 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         this.lastChecked = lastChecked;
     }
 
-    public NettyTileEntity(UUID world, int x, int y, int z, boolean visible, int blockID) {
+    public NettyTileEntity(int x, int y, int z, boolean visible, int blockID) {
         this.x = x;
         this.y = y;
         this.z = z;
         this.visible = visible;
         this.blockID = blockID;
-        this.world = world;
         lastChecked = NEVER_CHECKED;
     }
 
@@ -43,7 +37,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     }
 
     @Override
-    public TileEntityLocatable<PacketReplayData> setVisible(boolean visible) {
+    public TrackedTileEntity<PacketReplayData> setVisible(boolean visible) {
         this.visible = visible;
         return this;
     }
@@ -54,7 +48,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     }
 
     @Override
-    public TileEntityLocatable<PacketReplayData> setLastChecked(int lastChecked) {
+    public TrackedTileEntity<PacketReplayData> setLastChecked(int lastChecked) {
         this.lastChecked = lastChecked;
         return this;
     }
@@ -65,7 +59,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     }
 
     @Override
-    public TileEntityLocatable<PacketReplayData> setBlockID(int blockID) {
+    public TrackedTileEntity<PacketReplayData> setBlockID(int blockID) {
         this.blockID = blockID;
         return this;
     }
@@ -76,7 +70,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     }
 
     @Override
-    public TileEntityLocatable<PacketReplayData> setExtraData(PacketReplayData extraData) {
+    public TrackedTileEntity<PacketReplayData> setExtraData(PacketReplayData extraData) {
         this.extraData = extraData;
         return this;
     }
@@ -102,16 +96,6 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     @Override
     public int blockZ() {
         return z;
-    }
-
-    @Override
-    public LocatableType getType() {
-        return LocatableType.ExternalImmutableBlock;
-    }
-
-    @Override
-    public UUID world() {
-        return world;
     }
 
     @Override
