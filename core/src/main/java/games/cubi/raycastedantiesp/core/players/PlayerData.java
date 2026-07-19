@@ -3,7 +3,7 @@ package games.cubi.raycastedantiesp.core.players;
 import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
@@ -32,7 +32,7 @@ public class PlayerData {
         entityView = ViewRegistry.createEntityView();
         playerView = ViewRegistry.createPlayerEntityView();
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
-        NettyEntityLocatable<?, ?> selfEntity = Logger.requireNonNull(
+        NettyEntity<?, ?> selfEntity = Logger.requireNonNull(
                 selfEntityCreator.createSelfEntity(this, selfEntityID, player),
                 "Self entity creator returned null",
                 3,
@@ -103,7 +103,7 @@ public class PlayerData {
         return null;
     }
 
-    public NettyEntityLocatable<?,?> entityFromID(int entityID) {
+    public NettyEntity<?,?> entityFromID(int entityID) {
         if (nettyData.isSelfEntityID(entityID)) {
             return nettyData.getSelfEntity();
         }
@@ -111,7 +111,7 @@ public class PlayerData {
         if (entityView == null) {
             return null;
         }
-        return (NettyEntityLocatable<?, ?>) entityView.getEntity(entityID);
+        return (NettyEntity<?, ?>) entityView.getEntity(entityID);
     }
 
     public void setBypassPermission(boolean hasBypassPermission) {

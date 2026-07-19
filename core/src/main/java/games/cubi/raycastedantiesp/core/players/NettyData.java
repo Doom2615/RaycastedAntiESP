@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.*;
 import games.cubi.raycastedantiesp.core.utils.Packet.Packets;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
+import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_VEHICLE;
 
 /**
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.
@@ -249,15 +249,15 @@ public class NettyData implements Clearable {
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Self entity tracking:
     //
-    private final NettyEntityLocatable<?, ?> selfEntity;
+    private final NettyEntity<?, ?> selfEntity;
     private final int selfEntityID;
 
-    public NettyData(NettyEntityLocatable<?, ?> selfEntity) {
+    public NettyData(NettyEntity<?, ?> selfEntity) {
         this.selfEntity = selfEntity;
         this.selfEntityID = selfEntity.entityID();
     }
 
-    public NettyEntityLocatable<?, ?> getSelfEntity() {
+    public NettyEntity<?, ?> getSelfEntity() {
         return selfEntity;
     }
 

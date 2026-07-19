@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.view.controller;
 
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
 
@@ -19,7 +19,7 @@ final class LeashReconciliationTask extends BaseEntitySpawnTask {
 
     @Override
     public void run() {
-        NettyEntityLocatable<?,?> leashed = playerData.entityFromID(leashedEntityID);
+        NettyEntity<?,?> leashed = playerData.entityFromID(leashedEntityID);
         if (leashed == null) {
             Logger.error("Reconciliation fail: Attempted to reconcile leash for unknown leashed entity, leashedEntityId=" + leashedEntityID, 3, this.getClass());
             return;

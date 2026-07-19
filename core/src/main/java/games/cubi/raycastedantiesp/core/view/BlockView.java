@@ -1,8 +1,8 @@
 package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.locatables.api.BlockLocatable;
-import games.cubi.locatables.implementations.ImmutableBlockLocatable;
-import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
+import games.cubi.locatables.api.BlockSpatial;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
@@ -30,26 +30,24 @@ public interface BlockView extends Clearable {
      *
      * @return the current tracked tile entity, or null when the location cannot be tracked.
      */
-    TileEntityLocatable<?> updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew);
+    TrackedTileEntity<?> updateOrInsertTileEntity(UUID world, BlockSpatial position, int blockID, boolean visibleIfNew);
 
     /** Structural-writer operation. */
-    void removeTileEntity(BlockLocatable location);
+    void removeTileEntity(UUID world, BlockSpatial position);
 
-    TileEntityLocatable<?> getTrackedTileEntity(BlockLocatable location);
+    TrackedTileEntity<?> getTrackedTileEntity(UUID world, BlockSpatial position);
 
-    TileEntityLocatable<?> getTrackedTileEntity(ImmutableBlockLocatable location);
-
-    boolean isVisible(BlockLocatable location, int currentTick);
+    boolean isVisible(UUID world, BlockSpatial position, int currentTick);
 
     /** Applies a checked visibility decision and queues any required client transition. */
-    void applyTileEntityVisibilityDecision(BlockLocatable location, boolean visible, int currentTick);
+    void applyTileEntityVisibilityDecision(TrackedTileEntity<?> tileEntity, boolean visible, int currentTick, long modeToken, ViewWorldContext expectedContext);
 
     /**
      * Records visibility established by the current outbound packet without queuing another packet. This also resets
      * the check timestamp because the transmitted state supersedes the result of any previous visibility check. The
      * tile entity must be the current state returned by this view's structural-writer operations.
      */
-    void recordOutboundTileEntityVisibility(TileEntityLocatable<?> tileEntity, boolean visible);
+    void recordOutboundTileEntityVisibility(TrackedTileEntity<?> tileEntity, boolean visible);
 
     /** Applies a mode change from the structural writer. */
     void applyTileEntityCheckMode(boolean enabled, int currentTick);
@@ -67,7 +65,7 @@ public interface BlockView extends Clearable {
      *
      * @return number of tile entities passed to {@code action}.
      */
-    int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<BlockLocatable> action);
+    int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<TrackedTileEntity<?>> action);
 
     @FunctionalInterface
     interface VisibilityResolver {
@@ -75,7 +73,7 @@ public interface BlockView extends Clearable {
         byte HIDE = -23;
         byte SHOW = 42;
 
-        byte setVisible(BlockLocatable location);
+        byte setVisible(TrackedTileEntity<?> tileEntity);
     }
 
     /**

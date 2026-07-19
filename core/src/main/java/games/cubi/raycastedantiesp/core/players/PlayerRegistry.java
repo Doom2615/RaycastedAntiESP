@@ -1,7 +1,6 @@
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.api.Locatable;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -11,7 +10,7 @@ public class PlayerRegistry {
 
     @FunctionalInterface
     public interface SelfEntityCreator {
-        NettyEntityLocatable<?, ?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
+        NettyEntity<?, ?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
     }
 
     private static PlayerRegistry instance;

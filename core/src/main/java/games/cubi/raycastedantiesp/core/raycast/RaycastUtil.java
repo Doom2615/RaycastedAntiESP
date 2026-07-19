@@ -2,20 +2,15 @@ package games.cubi.raycastedantiesp.core.raycast;
 
 import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.api.MutableFloatingSpatial;
-import games.cubi.locatables.api.MutableSpatial;
 import games.cubi.locatables.api.Spatial;
-import games.cubi.locatables.implementations.MutableBlockVector;
 import games.cubi.locatables.implementations.MutableSpatialImpl;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 
 public class RaycastUtil {
 
 //True: Has line-of-sight
-    public static boolean raycast(PlayerData player, Locatable start, Locatable end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, int stepSize, ParticleSpawner particleSpawner) {
-        if (!start.world().equals(end.world())) return false;
-
+    public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, int stepSize, ParticleSpawner particleSpawner) {
         MutableFloatingSpatial clonedEnd = end.cloneAndIfBlockThenCentre();
         double total = start.distance(clonedEnd) - stepSize; //benchmarking shows that calling distance() is faster than distanceSquared() then checking distanceSquared < stepSize*stepSize every time despite the latter replacing a square root with multiplication
         if (total <= alwaysShowRadius) return true;

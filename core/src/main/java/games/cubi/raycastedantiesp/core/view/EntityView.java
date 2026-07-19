@@ -1,8 +1,8 @@
 package games.cubi.raycastedantiesp.core.view;
 
-import games.cubi.raycastedantiesp.core.locatables.EntityLocatable;
-import games.cubi.locatables.api.Locatable;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.TrackedEntity;
+import games.cubi.locatables.api.Spatial;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 import java.util.Collection;
@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable {
-    void insertEntity(T entity);
+public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
+    void insertEntity(UUID world, T entity);
 
     void removeEntity(int entityID, int currentTick);
 
@@ -23,7 +23,7 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
 
     T getEntity(int entityID);
 
-    Locatable getLocation(UUID entityUUID);
+    Spatial getPosition(UUID entityUUID);
 
     int getEntityID(UUID entityUUID);
 
