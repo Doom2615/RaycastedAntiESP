@@ -63,7 +63,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     @Override
     public boolean isBlockOccluding(BlockLocatable location) {
-        if (!isTrackedWorld(location.world())) {
+        if (location == null || !isTrackedWorld(location.world())) {
             return false;
         }
 
