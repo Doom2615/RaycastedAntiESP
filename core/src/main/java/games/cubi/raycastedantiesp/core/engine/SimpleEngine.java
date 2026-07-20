@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.engine;
 
-import games.cubi.locatables.api.ImmutableLocatable;
+import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
@@ -8,7 +8,7 @@ import games.cubi.raycastedantiesp.core.config.DebugConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.raycast.ParticleSpawner;
@@ -20,7 +20,6 @@ import games.cubi.raycastedantiesp.core.view.EntityView;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
@@ -341,35 +340,40 @@ public abstract class SimpleEngine implements Engine {
                 timings.incrementNullLocationSkippedPlayers();
                 continue;
             }
+            int worldEpoch = playerData.tryAcquireWorldEpochFor(playerLocation.world());
+            if (worldEpoch == PlayerData.INVALID_WORLD_EPOCH) {
+                if (tileEntityConfig.enabled()) timings.incrementTileWorldSkipped();
+                continue;
+            }
             timings.incrementProcessedPlayers();
 
             if (entityConfig.enabled()) {
                 long sectionStartNanos = timings.startEntitySection();
-                checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick, timings);
+                checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
                 timings.finishEntitySection(sectionStartNanos);
             }
             if (playerConfig.enabled()) {
                 long sectionStartNanos = timings.startPlayerSection();
-                checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick, timings);
+                checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
                 timings.finishPlayerSection(sectionStartNanos);
             }
             if (tileEntityConfig.enabled()) {
                 long sectionStartNanos = timings.startTileSection();
-                checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick, timings);
+                checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
                 timings.finishTileSection(sectionStartNanos);
             }
         }
     }
 
-    private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
+    private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         EntityView<?> entityView = player.entityView();
 
-        int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), entity -> {
+        int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, entity -> {
             boolean wasVisible = entity.visible();
-            if (attachedToSelf(player, entityView, entity, currentTick)) {
+            if (attachedToSelf(player, entityView, entity, currentTick, worldEpoch)) {
                 return;
             }
-            ImmutableLocatable entityLocation = entity.getOffsetEntityLocation();
+            ImmutableSpatial entityLocation = entity.getOffsetPosition();
             if (entityLocation == null) {
                 timings.incrementEntityNullTargets();
                 Logger.debug("SimpleEngine.checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
@@ -379,21 +383,21 @@ public abstract class SimpleEngine implements Engine {
                 return;
             }
             timings.incrementEntityRaycasts();
-            boolean canSee = RaycastUtil.raycast(player, playerLocation, entityLocation, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
-            entityView.setVisibility(entity, canSee, currentTick);
+            boolean canSee = RaycastUtil.raycast(playerLocation, entityLocation, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
+            entityView.setVisibility(entity, canSee, currentTick, worldEpoch);
         });
         timings.addEntityChecked(checked);
     }
 
-    private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
+    private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         EntityView<?> playerView = player.playerView();
 
-        int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), otherPlayer -> {
+        int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, otherPlayer -> {
             boolean wasVisible = otherPlayer.visible();
-            if (attachedToSelf(player, playerView, otherPlayer, currentTick)) {
+            if (attachedToSelf(player, playerView, otherPlayer, currentTick, worldEpoch)) {
                 return;
             }
-            ImmutableLocatable otherPlayerLocation = otherPlayer.getOffsetEntityLocation();
+            ImmutableSpatial otherPlayerLocation = otherPlayer.getOffsetPosition();
             if (otherPlayerLocation == null) {
                 timings.incrementPlayerNullTargets();
                 Logger.debug("SimpleEngine.checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
@@ -403,37 +407,33 @@ public abstract class SimpleEngine implements Engine {
                 return;
             }
             timings.incrementPlayerRaycasts();
-            boolean canSee = RaycastUtil.raycast(player, playerLocation, otherPlayerLocation, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
-            playerView.setVisibility(otherPlayer, canSee, currentTick);
+            boolean canSee = RaycastUtil.raycast(playerLocation, otherPlayerLocation, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
+            playerView.setVisibility(otherPlayer, canSee, currentTick, worldEpoch);
         });
         timings.addPlayerChecked(checked);
     }
 
-    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntityLocatable<?,?> entity, int currentTick) {
+    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntity<?,?> entity, int currentTick, int worldEpoch) {
         int selfEntityID = player.nettyData().getSelfEntityID();
         if (!player.nettyData().isSelfEntityID(entity.leashingEntity())
                 && !player.nettyData().isSelfEntityID(entity.vehicleID())
                 && !PrimitiveIntArrayList.contains(entity.passengerIDs(), selfEntityID)) {
             return false;
         }
-        view.setVisibility(entity, true, currentTick);
+        view.setVisibility(entity, true, currentTick, worldEpoch);
         return true;
     }
 
-    private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
+    private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         long modeToken = blockView.tileEntityCheckModeToken();
-        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, modeToken, tileEntityLocation -> {
-            if (tileEntityLocation.world() == null || !tileEntityLocation.world().equals(playerLocation.world())) {
-                timings.incrementTileWorldSkipped();
-                return BlockView.VisibilityResolver.SKIPPED;
-            }
+        int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, modeToken, worldEpoch, tileEntityLocation -> {
 
             if (playerLocation.distanceSquared(tileEntityLocation) > (double) tileEntityConfig.getRaycastRadius() * tileEntityConfig.getRaycastRadius()) {
                 timings.incrementTileRadiusSkipped();
                 return BlockView.VisibilityResolver.HIDE;
             }
             timings.incrementTileRaycasts();
-            boolean canSee = RaycastUtil.raycast(player, playerLocation, tileEntityLocation, tileEntityConfig.getMaxOccludingCount() + 1, tileEntityConfig.getAlwaysShowRadius(), tileEntityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
+            boolean canSee = RaycastUtil.raycast(playerLocation, tileEntityLocation, tileEntityConfig.getMaxOccludingCount() + 1, tileEntityConfig.getAlwaysShowRadius(), tileEntityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
             return canSee ? BlockView.VisibilityResolver.SHOW : BlockView.VisibilityResolver.HIDE;
         });
         timings.addTileChecked(checked);
