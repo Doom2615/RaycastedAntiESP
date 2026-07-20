@@ -3,16 +3,12 @@ package games.cubi.raycastedantiesp.core.chunks.blocks;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.CHAR_ARRAY_HANDLE;
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 abstract class AbstractPalettedBlockChunkData implements BlockChunkData {
-    private static final VarHandle CHAR_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(char[].class);
-    private static final VarHandle LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
-
     // Each concrete palette store allocates its maximum palette size up front. Adding a block only fills another slot in this array.
     // When the palette is full, the chunk upgrades to the next implementation.
     protected final char[] palette;

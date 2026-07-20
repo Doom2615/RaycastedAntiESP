@@ -3,16 +3,14 @@ package games.cubi.raycastedantiesp.core.chunks.blocks;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.util.function.IntUnaryOperator;
+
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.BYTE_ARRAY_HANDLE;
 
 public class FourBlockChunkData extends AbstractPalettedBlockChunkData {
     private static final int ENTRIES_PER_BYTE = 4;
     private static final int BITS_PER_ENTRY = 2;
     private static final int PALETTE_MASK = 0b11;
-    private static final VarHandle BYTE_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(byte[].class);
 
     private final byte[] blockData = new byte[ChunkData.BLOCK_COUNT / ENTRIES_PER_BYTE];
 

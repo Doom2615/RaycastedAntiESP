@@ -3,16 +3,12 @@ package games.cubi.raycastedantiesp.core.chunks.blocks;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.CHAR_ARRAY_HANDLE;
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 public class CharArrayBlockChunkData implements BlockChunkData {
-    private static final VarHandle CHAR_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(char[].class);
-    private static final VarHandle LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
-
     private final char[] blockData;
     private final long[] occlusionData;
 

@@ -2,7 +2,6 @@ package games.cubi.raycastedantiesp.core.utils;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -32,22 +31,8 @@ import java.util.Objects;
  */
 public abstract class InvasivelyLinkedSWMRList<T extends InvasivelyLinkedSWMRList<T>> implements Iterable<T> {
 
-    private T next;
+    private T next; private static final VarHandle NEXT = VarHandler.get(InvasivelyLinkedSWMRList.class, "next", InvasivelyLinkedSWMRList.class);
     private T previous;
-
-    private static final VarHandle NEXT;
-
-    static {
-        try {
-            NEXT = MethodHandles.lookup().findVarHandle(
-                    InvasivelyLinkedSWMRList.class,
-                    "next",
-                    InvasivelyLinkedSWMRList.class
-            );
-        } catch (ReflectiveOperationException exception) {
-            throw new ExceptionInInitializerError(exception);
-        }
-    }
 
     /**
      * Returns this object with its concrete node type.

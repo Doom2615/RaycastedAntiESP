@@ -1,15 +1,14 @@
 package games.cubi.raycastedantiesp.core.chunks;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.util.Arrays;
+
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 /**
  * A 4096-bit bitset, where 1 indicates occluding and 0 indicates not occluding.
  * Safe for single-writer, multiple-reader setups
  */
 public final class OccludingChunkDataImpl implements OccludingChunkData {
-    private static final VarHandle LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
     // Plain reads/writes would probably be fine as occluding state being stale for a few seconds causes no issues, and tearing is a non-issue as this is a bitset, so only a single bit value matters at a time.
     // However, plain reads can technically be cached indefinitely, so opaque reads are more correct.
 

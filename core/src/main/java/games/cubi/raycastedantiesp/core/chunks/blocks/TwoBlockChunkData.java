@@ -3,17 +3,14 @@ package games.cubi.raycastedantiesp.core.chunks.blocks;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 
 import static games.cubi.raycastedantiesp.core.chunks.ChunkData.packLocalChecked;
 import static games.cubi.raycastedantiesp.core.chunks.ChunkData.packUncheckedGuarded;
+import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 //functionally a bitset
 public class TwoBlockChunkData implements BlockChunkData {
-    private static final VarHandle LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
     // Plain reads/writes would probably be fine as occluding state being stale for a few seconds causes no issues, and tearing is a non-issue as this is a bitset, so only a single bit value matters at a time.
     // However, plain reads can technically be cached indefinitely, so opaque reads are more correct.
 
