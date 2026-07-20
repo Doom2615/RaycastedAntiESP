@@ -148,16 +148,20 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
         if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
             return;
         }
+        if (entitiesByUUID.get(entity.entityUUID()) != entity) {
+            return;
+        }
         if (entity.isSelfEntity()) return;
-        if (entity.visible() != visible) {
+        boolean visibilityChanged = entity.visible() != visible;
+        entity.setVisible(visible);
+        entity.setLastChecked(currentTick);
+        if (visibilityChanged) {
             transitions.add(new EntityViewTransition(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
                     entity,
                     expectedWorldEpoch
             ));
         }
-        entity.setVisible(visible);
-        entity.setLastChecked(currentTick);
     }
 
     @Override

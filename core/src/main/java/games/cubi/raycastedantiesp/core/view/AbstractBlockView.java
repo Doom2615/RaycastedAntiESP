@@ -151,7 +151,10 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         if (!modeEnabled(modeToken)) {
             shouldBeVisible = true;
         }
-        if (currentVisibility != shouldBeVisible) {
+        boolean visibilityChanged = currentVisibility != shouldBeVisible;
+        tileEntity.setVisible(shouldBeVisible);
+        tileEntity.setLastChecked(currentTick);
+        if (visibilityChanged) {
             transitions.add(new BlockViewTransition(
                     shouldBeVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE,
                     tileEntity,
@@ -159,8 +162,6 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
                     expectedWorldEpoch
             ));
         }
-        tileEntity.setVisible(shouldBeVisible);
-        tileEntity.setLastChecked(currentTick);
     }
 
     @Override
