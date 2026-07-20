@@ -39,7 +39,7 @@ public abstract class SimpleEngine implements Engine {
     private final AtomicInteger tickState = new AtomicInteger(TICK_IDLE);
     private final AtomicLong tickNanos = new AtomicLong(0);
     private final AsyncRunner asyncRunner;
-    private volatile TimingStats timingStats = TimingStatsNoOp.INSTANCE;
+    private final TimingStatsSelector timingStatsSelector = new TimingStatsSelector();
 
     public SimpleEngine(ConfigManager config, ParticleSpawner particleSpawner, IntSupplier currentTickSupplier, AsyncRunner asyncRunner) {
         this.config = config;
@@ -469,14 +469,6 @@ public abstract class SimpleEngine implements Engine {
      * @return the timing sink that should be used for a newly starting tick or skip record.
      */
     private TimingStats timingStats(DebugConfig debugConfig) {
-        if (!debugConfig.recordTimings()) {
-            timingStats = TimingStatsNoOp.INSTANCE;
-            return timingStats;
-        }
-
-        if (timingStats == TimingStatsNoOp.INSTANCE) {
-            timingStats = new TimingStats();
-        }
-        return timingStats;
+        return timingStatsSelector.select(debugConfig.recordTimings());
     }
 }
