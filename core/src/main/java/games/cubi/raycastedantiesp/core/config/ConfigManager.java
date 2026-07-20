@@ -5,10 +5,12 @@ import games.cubi.raycastedantiesp.core.config.engine.EngineConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
+import java.lang.invoke.VarHandle;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +35,7 @@ public class ConfigManager {
 
     private ConfigurationNode config;
     private RootConfig startupConfig;
-    private volatile RootConfig activeConfig;
+    private volatile RootConfig activeConfig; private static final VarHandle ACTIVE_CONFIG = VarHandler.get(ConfigManager.class, "activeConfig", RootConfig.class);
 
     private ConfigManager(Supplier<InputStream> resourceSupplier, Path dataFolder, List<ConfigExtension<? extends Config>> extensions) {
         this.resourceSupplier = resourceSupplier;
@@ -74,7 +76,7 @@ public class ConfigManager {
         if (startupConfig == null) {
             startupConfig = parsed;
         }
-        activeConfig = parsed;
+        ACTIVE_CONFIG.setOpaque(this, parsed);
     }
 
     public SetConfigResult setConfigValue(String path, String rawValue) {
@@ -149,38 +151,42 @@ public class ConfigManager {
         }
 
         config = candidate;
-        activeConfig = parsed;
+        ACTIVE_CONFIG.setOpaque(this, parsed);
         saveConfigNode(candidate);
         return SetConfigResult.ok();
     }
 
     public PlayerConfig getPlayerConfig() {
-        return activeConfig.checksConfig().playerConfig();
+        return activeConfig().checksConfig().playerConfig();
     }
 
     public EntityConfig getEntityConfig() {
-        return activeConfig.checksConfig().entityConfig();
+        return activeConfig().checksConfig().entityConfig();
     }
 
     public TileEntityConfig getTileEntityConfig() {
-        return activeConfig.checksConfig().tileEntityConfig();
+        return activeConfig().checksConfig().tileEntityConfig();
     }
 
     public DebugConfig getDebugConfig() {
-        RootConfig current = activeConfig;
+        RootConfig current = activeConfig();
         return current == null ? null : current.debugConfig();
     }
 
     public EngineConfig getEngineConfig() {
-        return activeConfig.engineConfig();
+        return activeConfig().engineConfig();
     }
 
     public BlockProcessorConfig getBlockProcessorConfig() {
-        return activeConfig.blockProcessorConfig();
+        return activeConfig().blockProcessorConfig();
     }
 
     public <T extends Config> T getExtensionConfig(Class<T> type) {
-        return activeConfig.extensionConfig(type);
+        return activeConfig().extensionConfig(type);
+    }
+
+    private RootConfig activeConfig() {
+        return (RootConfig) ACTIVE_CONFIG.getOpaque(this);
     }
 
     public ConfigurationNode getConfigFile() {
