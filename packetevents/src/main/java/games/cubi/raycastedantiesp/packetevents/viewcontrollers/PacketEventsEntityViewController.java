@@ -81,7 +81,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);
             int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
             playerData = handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTick);
-            handleWorldStatePacket(viewerUUID, packet.getWorldName(), packet.getDimensionType().getMinY(), currentTick);
+            String worldName = packet.getWorldName();
+            handleWorldStatePacket(viewerUUID, worldName, COMMON.resolveWorldUUID(worldName), packet.getDimensionType().getMinY(), currentTick);
         }
 
         if (playerData == null) {
@@ -222,7 +223,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             case PacketType.Play.Server.RESPAWN -> {
                 WrapperPlayServerRespawn packet = new WrapperPlayServerRespawn(event);
-                handleWorldStatePacket(viewer.getUUID(), packet.getWorldName().orElse(null), packet.getDimensionType().getMinY(), currentTick);
+                String worldName = packet.getWorldName().orElse(null);
+                handleWorldStatePacket(viewer.getUUID(), worldName, worldName == null ? null : COMMON.resolveWorldUUID(worldName), packet.getDimensionType().getMinY(), currentTick);
             }
             default -> {}
         }
