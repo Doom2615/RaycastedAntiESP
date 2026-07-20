@@ -403,8 +403,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private void processEntityTransitions(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView) {
+        int worldEpoch = data.acquireWorldEpoch(); //epoch can only change on the netty thread, so the epoch cannot be invalidated between this read and the packets being written
         for (EntityViewTransition transition : entityView.drainTransitions()) {
-            PacketEventsEntity entity = getTrackedEntity(entityView, transition.targetUUID());
+            if (!(transition.entity() instanceof PacketEventsEntity entity)
+                    || transition.worldEpoch() != worldEpoch
+                    || entityView.getEntity(entity.entityUUID()) != entity) {
+                continue;
+            }
 
             switch (transition.type()) {
                 case HIDE -> {
@@ -416,7 +421,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 case SHOW -> {
                     if (entity == null || entity.isSelfEntity()) {
                         Logger.warning("PacketEvents.processEntityTransitions show-skipped viewer=" + data.getPlayerUUID()
-                                + " target=" + transition.targetUUID()
+                                + " target=" + entity.entityUUID()
                                 + " reason="
                                 + (entity == null ? "missing-entity" : "self-entity"), 2, PacketEventsEntityViewController.class);
                         continue;

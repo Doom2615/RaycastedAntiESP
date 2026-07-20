@@ -1,9 +1,9 @@
 package games.cubi.raycastedantiesp.core.view;
 
-import java.util.UUID;
+import games.cubi.raycastedantiesp.core.locatables.TrackedEntity;
 
 // Used to cache visibility changes until the player's netty thread next processes
-public record EntityViewTransition(Type type, UUID targetUUID, int entityID) {
+public record EntityViewTransition(Type type, TrackedEntity<?, ?> entity, int worldEpoch) {
     public enum Type {
         SHOW,
         HIDE,
