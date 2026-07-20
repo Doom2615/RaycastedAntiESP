@@ -22,6 +22,7 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.raycast.RaycastUtil;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
+import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import games.cubi.raycastedantiesp.paper.UpdateChecker;
 import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
@@ -42,6 +43,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.UUID;
 
 // Credit to Strokkur for making StrokkCommands, a non-hideous way to use the power of brigadier.
 
@@ -199,12 +202,108 @@ public class RaycastedAntiESPCommand {
         @Executes("entity-id")
         void getFromEntityID(int entityID, Player player) {
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            TrackedEntity<?, ?> entityLocatable = playerData.entityView().getEntity(entityID);
+            if (playerData == null) {
+                player.sendRichMessage("<red>No player data is registered for " + describeViewer(player.getUniqueId()) + ".");
+                return;
+            }
+
             Entity bukkitEntity = SpigotConversionUtil.getEntityById(player.getWorld(), entityID);
-            player.sendRichMessage("Entity with ID " + entityID + ":");
-            player.sendRichMessage("According to Bukkit: " + bukkitEntity);
-            player.sendRichMessage("Bukkit type: " + bukkitEntity.getAsString());
-            player.sendRichMessage("According to PacketEvents: " + entityLocatable);
+            player.sendRichMessage("<white>Entity with ID " + entityID + " for viewer " + describeViewer(playerData.getPlayerUUID()) + ":");
+            if (bukkitEntity == null) {
+                player.sendRichMessage("<gray>According to Bukkit: <red>not found");
+            } else {
+                sendBukkitEntityData(player, bukkitEntity);
+            }
+
+            int matches = reportEntityIDMatches(player, playerData, entityID);
+            if (matches == 0) {
+                player.sendRichMessage("<gray>According to PacketEvents: <red>not found in either tracked view");
+            }
+        }
+
+        @Executes("entity-id")
+        void getFromEntityID(int entityID, CommandSender sender) {
+            sender.sendRichMessage("<white>Searching all connected player views for entity ID " + entityID + ":");
+            int matches = 0;
+            for (PlayerData playerData : PlayerRegistry.getInstance().getAllPlayerData()) {
+                if (!playerData.isConnected()) {
+                    continue;
+                }
+                matches += reportEntityIDMatches(sender, playerData, entityID);
+            }
+            if (matches == 0) {
+                sender.sendRichMessage("<red>No tracked entity with ID " + entityID + " was found.");
+            }
+        }
+
+        @Executes("entity-uuid")
+        void getFromEntityUUID(Entity entity, CommandSender sender) {
+            UUID entityUUID = entity.getUniqueId();
+            sender.sendRichMessage("<white>Bukkit entity data:");
+            sendBukkitEntityData(sender, entity);
+            sender.sendRichMessage("<white>Searching all connected player views for entity UUID " + entityUUID + ":");
+
+            int matches = 0;
+            for (PlayerData playerData : PlayerRegistry.getInstance().getAllPlayerData()) {
+                if (!playerData.isConnected()) {
+                    continue;
+                }
+                matches += reportEntityUUIDMatches(sender, playerData, entityUUID);
+            }
+            if (matches == 0) {
+                sender.sendRichMessage("<red>No tracked entity with UUID " + entityUUID + " was found.");
+            }
+        }
+
+        private int reportEntityIDMatches(CommandSender sender, PlayerData playerData, int entityID) {
+            return reportEntityIDMatches(sender, playerData, playerData.entityView(), "entity view", entityID)
+                    + reportEntityIDMatches(sender, playerData, playerData.playerView(), "player view", entityID);
+        }
+
+        private int reportEntityIDMatches(CommandSender sender, PlayerData playerData, EntityView<?> view, String viewName, int entityID) {
+            int matches = 0;
+            for (UUID entityUUID : view.getKnownEntities()) {
+                TrackedEntity<?, ?> entity = view.getEntity(entityUUID);
+                if (entity == null || entity.entityID() != entityID) {
+                    continue;
+                }
+                sendTrackedEntityMatch(sender, playerData, viewName, entity);
+                matches++;
+            }
+            return matches;
+        }
+
+        private int reportEntityUUIDMatches(CommandSender sender, PlayerData playerData, UUID entityUUID) {
+            int matches = reportEntityUUIDMatch(sender, playerData, playerData.entityView(), "entity view", entityUUID);
+            return matches + reportEntityUUIDMatch(sender, playerData, playerData.playerView(), "player view", entityUUID);
+        }
+
+        private int reportEntityUUIDMatch(CommandSender sender, PlayerData playerData, EntityView<?> view, String viewName, UUID entityUUID) {
+            TrackedEntity<?, ?> entity = view.getEntity(entityUUID);
+            if (entity == null) {
+                return 0;
+            }
+            sendTrackedEntityMatch(sender, playerData, viewName, entity);
+            return 1;
+        }
+
+        private void sendTrackedEntityMatch(CommandSender sender, PlayerData playerData, String viewName, TrackedEntity<?, ?> entity) {
+            sender.sendRichMessage("<green>Match for viewer <white>" + describeViewer(playerData.getPlayerUUID()) + "<green> in <white>" + viewName + "<green>:");
+            sender.sendRichMessage("<gray>According to PacketEvents: <white>" + entity);
+        }
+
+        private void sendBukkitEntityData(CommandSender sender, Entity entity) {
+            sender.sendRichMessage("<gray>According to Bukkit: <white>" + entity);
+            sender.sendRichMessage("<gray>Entity ID: <white>" + entity.getEntityId());
+            sender.sendRichMessage("<gray>Entity UUID: <white>" + entity.getUniqueId());
+            sender.sendRichMessage("<gray>Entity type: <white>" + entity.getType());
+            sender.sendRichMessage("<gray>Entity name: <white>" + entity.getName());
+            sender.sendRichMessage("<gray>Entity string: <white>" + entity.getAsString());
+        }
+
+        private String describeViewer(UUID playerUUID) {
+            Player player = Bukkit.getPlayer(playerUUID);
+            return player == null ? playerUUID.toString() : player.getName() + " (" + playerUUID + ")";
         }
 
         @DefaultExecutes
@@ -213,6 +312,8 @@ public class RaycastedAntiESPCommand {
             sender.sendRichMessage("<green>/raycastedantiesp test location-drift <gray>- Tests the drift between Bukkit and PacketEvents entity locations");
             sender.sendRichMessage("<green>/raycastedantiesp test benchmark <gray>- Benchmarks raycast speed by raycasting to 1000 random locatables around the player and printing the average time taken");
             sender.sendRichMessage("<green>/raycastedantiesp test loaded-chunks <gray>- Shows the number of chunks currently loaded in the player's block view");
+            sender.sendRichMessage("<green>/raycastedantiesp test entity-id <entity ID> [player] <gray>- Finds an entity by ID in one player's views, or in all player views when no player is supplied");
+            sender.sendRichMessage("<green>/raycastedantiesp test entity-uuid <entity> <gray>- Shows Bukkit data and all tracked view data for a native entity selection or UUID");
         }
     }
 }
