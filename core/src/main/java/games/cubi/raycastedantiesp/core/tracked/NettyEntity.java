@@ -7,8 +7,10 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
 import games.cubi.raycastedantiesp.core.utils.IntArrayListMarker;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.invoke.VarHandle;
 import java.util.UUID;
 
 /**
@@ -24,32 +26,38 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     private final PlayerData owningPlayer;
 
     // Netty mutatable fields. Should NEVER be mutated from the engine thread, but reads are fine.
-    private volatile double x, y, z;
-    private volatile float yaw;
-    private volatile float pitch;
-    private volatile float headYaw;
-    private volatile double velocityX;
-    private volatile double velocityY;
-    private volatile double velocityZ;
-    private volatile boolean onGround = true;
-    private volatile int@IntArrayListMarker[] leashedIDs;
-    private volatile int leasherID = NO_LEASHER;
-    private volatile int[] passengerIDs;
-    private volatile int vehicleID = NO_VEHICLE;
+    private volatile double x; private static final VarHandle X = VarHandler.get(NettyEntity.class, "x", double.class);
+    private volatile double y; private static final VarHandle Y = VarHandler.get(NettyEntity.class, "y", double.class);
+    private volatile double z; private static final VarHandle Z = VarHandler.get(NettyEntity.class, "z", double.class);
+
+    // Packet-thread-only replay and client state.
+    private float yaw;
+    private float pitch;
+    private float headYaw;
+    private double velocityX;
+    private double velocityY;
+    private double velocityZ;
+    private boolean onGround = true;
+    private int@IntArrayListMarker[] leashedIDs;
+
+    // Netty-written attachment state shared with the engine thread.
+    private volatile int leasherID = NO_LEASHER; private static final VarHandle LEASHER_ID = VarHandler.get(NettyEntity.class, "leasherID", int.class);
+    private volatile int[] passengerIDs; private static final VarHandle PASSENGER_IDS = VarHandler.get(NettyEntity.class, "passengerIDs", int[].class);
+    private volatile int vehicleID = NO_VEHICLE; private static final VarHandle VEHICLE_ID = VarHandler.get(NettyEntity.class, "vehicleID", int.class);
 
 
-    private volatile int entityData;
-    private volatile PacketReplayData packetReplayData; // For use storing the packets we can't be bothered to directly store, with all cached packets being sent back out to the client when entity is visible again.
+    private int entityData;
+    private PacketReplayData packetReplayData; // For use storing the packets we can't be bothered to directly store, with all cached packets being sent back out to the client when entity is visible again.
 
-    // mutatable by several threads (engine and netty), may need to investigate atomic updates for thread safety
-    private volatile int lastChecked;
-    private volatile boolean clientVisible = true;
+    // Mutable by the engine and packet threads.
+    private volatile int lastChecked; private static final VarHandle LAST_CHECKED = VarHandler.get(NettyEntity.class, "lastChecked", int.class);
+    private boolean clientVisible = true;
 
     // engine thread mutable, reads from netty and engine.
     private volatile boolean visible;
 
     public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
-        this.x = x; this.y = y; this.z = z;
+        X.set(this, x); Y.set(this, y); Z.set(this, z);
 
         this.entityID = entityID;
         this.entityUUID = entityUUID;
@@ -98,12 +106,12 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
 
     @Override
     public int lastChecked() {
-        return lastChecked;
+        return (int) LAST_CHECKED.getOpaque(this);
     }
 // todo it may be that this is only ever set by the engine thread? If so, just volatile annotation may be safe enough, as no two engine threads should update a single player at the same time (add guard lock for this)
     @Override
     public TrackedEntity<?, ?> setLastChecked(int lastChecked) {
-        this.lastChecked = lastChecked;
+        LAST_CHECKED.setOpaque(this, lastChecked);
         return this;
     }
 
@@ -223,23 +231,24 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
 
     @Override
     public int[] passengerIDs() {
-        return passengerIDs == null ? null : passengerIDs.clone();
+        int[] current = passengerIDsAcquire();
+        return current == null ? null : current.clone();
     }
 
     @Override
     public TrackedEntity<?, ?> setPassengerIDs(int[] passengerIDs) {
-        this.passengerIDs = passengerIDs == null ? new int[0] : passengerIDs.clone();
+        PASSENGER_IDS.setRelease(this, passengerIDs == null ? new int[0] : passengerIDs.clone());
         return this;
     }
 
     @Override
     public void setVehicleID(int vehicleID) {
-        this.vehicleID = vehicleID;
+        VEHICLE_ID.setOpaque(this, vehicleID);
     }
 
     @Override
     public int vehicleID() {
-        return vehicleID;
+        return (int) VEHICLE_ID.getOpaque(this);
     }
 
     @Override
@@ -261,12 +270,12 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
 
     @Override
     public int leashingEntity() {
-        return leasherID;
+        return (int) LEASHER_ID.getOpaque(this);
     }
 
     @Override
     public void setLeashingEntity(int leashingEntityID) {
-        this.leasherID = leashingEntityID;
+        LEASHER_ID.setOpaque(this, leashingEntityID);
     }
 
     @Override
@@ -282,70 +291,74 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
 
     @Override
     public ImmutableSpatial getOffsetPosition() {
-        return new ImmutableSpatialImpl(x, y + 0.5, z); //todo: move away from hardcoded offset
+        return new ImmutableSpatialImpl(x(), y() + 0.5, z()); //todo: move away from hardcoded offset
     }
 
     @Override
     public double x() {
-        return x;
+        return (double) X.getOpaque(this);
     }
 
     @Override
     public double y() {
-        return y;
+        return (double) Y.getOpaque(this);
     }
 
     @Override
     public double z() {
-        return z;
+        return (double) Z.getOpaque(this);
     }
 
     @Override
     public MutableFloatingSpatial setX(double x) {
-        this.x = x;
+        X.setOpaque(this, x);
         return this;
     }
 
     @Override
     public MutableFloatingSpatial setY(double y) {
-        this.y = y;
+        Y.setOpaque(this, y);
         return this;
     }
 
     @Override
     public MutableFloatingSpatial setZ(double z) {
-        this.z = z;
+        Z.setOpaque(this, z);
         return this;
     }
 
     @Override
     public MutableFloatingSpatial setPosition(double x, double y, double z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        X.setOpaque(this, x);
+        Y.setOpaque(this, y);
+        Z.setOpaque(this, z);
         updatePassengerPositions();
         return this;
     }
 
     @Override
     public MutableFloatingSpatial add(double x, double y, double z) {
-        this.x += x;
-        this.y += y;
-        this.z += z;
+        X.setOpaque(this, x() + x);
+        Y.setOpaque(this, y() + y);
+        Z.setOpaque(this, z() + z);
         updatePassengerPositions();
         return this;
     }
 
     // This does not correctly set the passenger position, as the passenger is above the vehicle. It is however close enough to minimise annoying interpolation on show.
     private void updatePassengerPositions() {
-        if (passengerIDs == null || passengerIDs.length == 0) return;
-        for (int passengerID : passengerIDs) {
+        int[] currentPassengerIDs = passengerIDsAcquire();
+        if (currentPassengerIDs == null || currentPassengerIDs.length == 0) return;
+        double currentX = x();
+        double currentY = y();
+        double currentZ = z();
+        for (int passengerID : currentPassengerIDs) {
             NettyEntity<?, ?> passenger = owningPlayer.entityFromID(passengerID);
             if (passenger != null) {
                 passenger.setVehicleID(entityID);
-                passenger.setX(x);
-                passenger.setY(y);
-                passenger.setZ(z);
+                passenger.setX(currentX);
+                passenger.setY(currentY);
+                passenger.setZ(currentZ);
                 passenger.updatePassengerPositions();
             }
         }
@@ -356,10 +369,10 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
         if (packetReplayData != null) packetReplayData.clear();
         packetReplayData = null;
 
-        vehicleID = NO_VEHICLE;
-        passengerIDs = null;
+        VEHICLE_ID.setOpaque(this, NO_VEHICLE);
+        PASSENGER_IDS.setRelease(this, null);
         leashedIDs = null;
-        leasherID = NO_LEASHER;
+        LEASHER_ID.setOpaque(this, NO_LEASHER);
     }
 
     @Override
@@ -369,21 +382,30 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
                 ", entityUUID=" + entityUUID +
                 ", isSelfEntity=" + isSelfEntity +
                 ", entityType=" + entityType +
-                ", x=" + x +
-                ", y=" + y +
-                ", z=" + z +
-                ", yaw=" + yaw +
-                ", pitch=" + pitch +
-                ", headYaw=" + headYaw +
-                ", velocityX=" + velocityX +
-                ", velocityY=" + velocityY +
-                ", velocityZ=" + velocityZ +
-                ", onGround=" + onGround +
-                ", leashedIDs=" + (leashedIDs == null ? null : PrimitiveIntArrayList.toString(leashedIDs)) +
-                ", leasherID=" + leasherID +
-                ", passengerIDs=" + (passengerIDs == null ? null : PrimitiveIntArrayList.toString(passengerIDs)) +
-                ", vehicleID=" + vehicleID +
-                ", entityData=" + entityData +
+                ", x=" + x() +
+                ", y=" + y() +
+                ", z=" + z() +
+                ", yaw=" + yaw() +
+                ", pitch=" + pitch() +
+                ", headYaw=" + headYaw() +
+                ", velocityX=" + velocityX() +
+                ", velocityY=" + velocityY() +
+                ", velocityZ=" + velocityZ() +
+                ", onGround=" + onGround() +
+                ", leashedIDs=" + nullableArrayToString(leashedIDs) +
+                ", leasherID=" + leashingEntity() +
+                ", passengerIDs=" + nullableArrayToString(passengerIDsAcquire()) +
+                ", vehicleID=" + vehicleID() +
+                ", entityData=" + entityData() +
                 '}';
     }
+
+    private int[] passengerIDsAcquire() {
+        return (int[]) PASSENGER_IDS.getAcquire(this);
+    }
+
+    private static String nullableArrayToString(int[] values) {
+        return values == null ? null : PrimitiveIntArrayList.toString(values);
+    }
+
 }
