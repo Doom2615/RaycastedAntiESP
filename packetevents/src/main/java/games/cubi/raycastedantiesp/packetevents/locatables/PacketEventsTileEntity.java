@@ -5,7 +5,7 @@ import games.cubi.raycastedantiesp.core.locatables.NettyTileEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;
 
 public class PacketEventsTileEntity extends NettyTileEntity<PacketEventsTileEntityReplayData> {
-    public PacketEventsTileEntity(BlockSpatial position, boolean visible, int lastChecked, int blockID) {
+    public PacketEventsTileEntity(BlockSpatial position, boolean visible, int lastChecked, char blockID) {
         super(position, visible, lastChecked, blockID);
     }
 }

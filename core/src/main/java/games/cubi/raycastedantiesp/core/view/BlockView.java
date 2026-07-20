@@ -31,7 +31,7 @@ public interface BlockView extends Clearable {
      *
      * @return the current tracked tile entity, or null when the location cannot be tracked.
      */
-    TrackedTileEntity<?> updateOrInsertTileEntity(UUID world, BlockSpatial position, int blockID, boolean visibleIfNew);
+    TrackedTileEntity<?> updateOrInsertTileEntity(UUID world, BlockSpatial position, char blockID, boolean visibleIfNew);
 
     /** Structural-writer operation. */
     void removeTileEntity(UUID world, BlockSpatial position);

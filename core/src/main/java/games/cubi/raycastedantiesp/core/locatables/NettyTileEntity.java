@@ -7,11 +7,11 @@ import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
 public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TrackedTileEntity<PacketReplayData> {
     private volatile boolean visible;
     private volatile int lastChecked;
-    private volatile int blockID;
+    private volatile char blockID;
     private volatile PacketReplayData extraData;
 
     private final int x, y, z;
-    public NettyTileEntity(BlockSpatial position, boolean visible, int lastChecked, int blockID) {
+    public NettyTileEntity(BlockSpatial position, boolean visible, int lastChecked, char blockID) {
         x = position.blockX();
         y = position.blockY();
         z = position.blockZ();
@@ -22,7 +22,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         this.lastChecked = lastChecked;
     }
 
-    public NettyTileEntity(int x, int y, int z, boolean visible, int blockID) {
+    public NettyTileEntity(int x, int y, int z, boolean visible, char blockID) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -59,7 +59,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
     }
 
     @Override
-    public TrackedTileEntity<PacketReplayData> setBlockID(int blockID) {
+    public TrackedTileEntity<PacketReplayData> setBlockID(char blockID) {
         this.blockID = blockID;
         return this;
     }

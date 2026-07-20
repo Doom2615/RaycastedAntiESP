@@ -140,7 +140,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     private void handleMultiBlockChange(PacketSendEvent event, BlockView blockView, UUID world, WrapperPlayServerMultiBlockChange packet, Locatable playerLocation, boolean tileChecksEnabled) {
         MutableBlockSpatialImpl key = new MutableBlockSpatialImpl(0, 0, 0);
         for (WrapperPlayServerMultiBlockChange.EncodedBlock change : packet.getBlocks()) {
-            int blockID = change.getBlockId();
+            char blockID = (char) change.getBlockId();
             boolean tileEntity = blockInfoResolver.isTileEntity(blockID);
             blockView.upsertBlock(world, change.getX(), change.getY(), change.getZ(), blockID);
             key.setBlockPosition(change.getX(), change.getY(), change.getZ());
@@ -195,7 +195,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     }
 
     private void handleSingleBlockChange(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, WrapperPlayServerBlockChange packet, boolean tileChecksEnabled) {
-        int blockID = packet.getBlockId();
+        char blockID = (char) packet.getBlockId();
         boolean tileEntity = blockInfoResolver.isTileEntity(blockID);
         Vector3i position = packet.getBlockPosition();
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(position.getX(), position.getY(), position.getZ());

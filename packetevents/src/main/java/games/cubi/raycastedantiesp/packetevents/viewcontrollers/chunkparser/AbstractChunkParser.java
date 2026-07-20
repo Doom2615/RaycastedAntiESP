@@ -73,7 +73,7 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
             for (int localY = 0; localY < ChunkData.CHUNK_SIZE; localY++) {
                 for (int localZ = 0; localZ < ChunkData.CHUNK_SIZE; localZ++) {
                     for (int localX = 0; localX < ChunkData.CHUNK_SIZE; localX++) {
-                        int blockID = section.getBlockId(localX, localY, localZ);
+                        char blockID = (char) section.getBlockId(localX, localY, localZ);
                         if (!blockInfoResolver.isTileEntity(blockID)) {
                             continue;
                         }

@@ -55,7 +55,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
                 : new OccludingChunkSectionStore(blockInfoResolver);
     }
 
-    protected abstract T createTrackedTileEntity(BlockSpatial position, int blockID, boolean visible);
+    protected abstract T createTrackedTileEntity(BlockSpatial position, char blockID, boolean visible);
 
 
     @Override
@@ -77,7 +77,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public T updateOrInsertTileEntity(UUID world, BlockSpatial position, int blockID, boolean visibleIfNew) {
+    public T updateOrInsertTileEntity(UUID world, BlockSpatial position, char blockID, boolean visibleIfNew) {
         if (position == null || !ensureTrackedWorld(world)) {
             return null;
         }

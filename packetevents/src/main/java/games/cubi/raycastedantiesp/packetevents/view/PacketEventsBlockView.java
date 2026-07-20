@@ -15,7 +15,7 @@ public class PacketEventsBlockView extends AbstractBlockView<PacketEventsTileEnt
     }
 
     @Override
-    protected PacketEventsTileEntity createTrackedTileEntity(BlockSpatial position, int blockID, boolean visible) {
+    protected PacketEventsTileEntity createTrackedTileEntity(BlockSpatial position, char blockID, boolean visible) {
         return new PacketEventsTileEntity(position, visible, TrackedTileEntity.NEVER_CHECKED, blockID);
     }
 }
