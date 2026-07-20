@@ -52,7 +52,7 @@ public abstract class PacketEntityViewController<P> {
     protected double hideOnSpawnEntityDistanceSquared = 0;
     protected double hideOnSpawnPlayerDistanceSquared = 0;
 
-    protected void handleWorldStatePacket(UUID player, String world, int minWorldHeight, int currentTick) {
+    protected void handleWorldStatePacket(UUID player, String world, UUID worldUUID, int minWorldHeight, int currentTick) {
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player);
         if (playerData == null) {
             Logger.error("Received world state packet for unknown player, uuid=" + player, 2, PacketEntityViewController.class);
@@ -70,15 +70,23 @@ public abstract class PacketEntityViewController<P> {
             return;
         }
 
-        if (previousWorld != null) {
-            nettyData.setExpectedWorldTransitionDestroyEntityIDs(drainRemainingEntityIDs(playerData));
-            playerData.blockView().clear();
-            playerData.entityView().clear();
-            playerData.playerView().clear();
-            nettyData.clearPendingReconciliationState();
-            nettyData.getSelfEntity().clear();
+        int[] remainingEntityIDs = previousWorld == null ? null : drainRemainingEntityIDs(playerData);
+        playerData.beginWorldTransition();
+        try {
+            if (previousWorld != null) {
+                nettyData.setExpectedWorldTransitionDestroyEntityIDs(remainingEntityIDs);
+                playerData.blockView().clear();
+                playerData.entityView().clear();
+                playerData.playerView().clear();
+                nettyData.clearPendingReconciliationState();
+                nettyData.getSelfEntity().clear();
+            }
+            nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
+        } catch (Exception e) {
+            Logger.error(e, 1, PacketEntityViewController.class);
+        } finally {
+            playerData.completeWorldTransition(worldUUID); //Don't leave the player stuck on an odd world epoch
         }
-        nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
     }
 
     protected PlayerData handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
@@ -119,20 +127,20 @@ public abstract class PacketEntityViewController<P> {
                 entity.setVisible(false);
                 entity.setClientVisible(false);
                 if (isPlayer) {
-                    insertEntityToPlayerView(entity, playerData);
+                    insertEntityToPlayerView(entity, playerData, world);
                     return true;
                 }
-                insertEntityToEntityView(entity, playerData);
+                insertEntityToEntityView(entity, playerData, world);
                 return true;
             }
         } else {
             entity.setClientVisible(true);
         }
         if (isPlayer) {
-            insertEntityToPlayerView(entity, playerData);
+            insertEntityToPlayerView(entity, playerData, world);
             return false;
         }
-        insertEntityToEntityView(entity, playerData);
+        insertEntityToEntityView(entity, playerData, world);
         return false;
     }
 
@@ -491,7 +499,7 @@ public abstract class PacketEntityViewController<P> {
             Logger.warning("Could not find owning view while forcing self-attached entity visible, id=" + entity.entityID() + " player=" + self.getPlayerUUID() + " reason=" + reason, 4, PacketEntityViewController.class);
             return false;
         }
-        view.setVisibility(entity.entityUUID(), true, currentTick);
+        view.setVisibility(entity, true, currentTick, self.acquireWorldEpoch());
         return !wasClientVisible;
     }
 
