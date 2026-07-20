@@ -240,9 +240,9 @@ class ChunkSectionStoreTest {
         ImmutableBlockLocatable second = new ImmutableBlockLocatable(world, 2, 65, 3);
         ImmutableBlockLocatable third = new ImmutableBlockLocatable(world, 3, 66, 4);
 
-        view.updateOrInsertTileEntity(first, 99, true);
-        view.updateOrInsertTileEntity(second, 99, true);
-        view.updateOrInsertTileEntity(third, 99, true);
+        TestTileEntity firstEntity = view.updateOrInsertTileEntity(first, 99, true);
+        TestTileEntity secondEntity = view.updateOrInsertTileEntity(second, 99, true);
+        TestTileEntity thirdEntity = view.updateOrInsertTileEntity(third, 99, true);
         TestTileEntity acquiredHead = view.getTrackedTileEntity(first);
 
         view.removeChunk(world, first.chunkX(), first.chunkZ());
@@ -250,6 +250,9 @@ class ChunkSectionStoreTest {
         assertNull(view.getTrackedTileEntity(first));
         assertNull(view.getTrackedTileEntity(second));
         assertNull(view.getTrackedTileEntity(third));
+        assertTrue(firstEntity.isRemoved());
+        assertTrue(secondEntity.isRemoved());
+        assertTrue(thirdEntity.isRemoved());
         assertEquals(0, view.forEachNeedingRecheck(-1, 0, ignored -> {}));
         int acquiredCount = 0;
         for (NettyTileEntity<TestExtraData> current = acquiredHead; current != null; current = current.nextAcquire()) {

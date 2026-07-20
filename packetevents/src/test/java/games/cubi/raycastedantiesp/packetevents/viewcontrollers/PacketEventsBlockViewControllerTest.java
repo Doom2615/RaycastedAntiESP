@@ -2,6 +2,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import games.cubi.locatables.implementations.ImmutableBlockSpatialImpl;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
+import games.cubi.raycastedantiesp.core.locatables.NettyTileEntity;
 import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
@@ -42,7 +43,10 @@ class PacketEventsBlockViewControllerTest {
         int replacementLastChecked = replacement.lastChecked();
 
         assertSame(original, transition.tileEntity());
-        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(view, transition, 2));
+        assertTrue(((NettyTileEntity<?>) original).isRemoved());
+        original.setLastChecked(42);
+        assertTrue(((NettyTileEntity<?>) original).isRemoved());
+        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(transition, 2));
         assertTrue(replacement.visible());
         assertEquals(replacementLastChecked, replacement.lastChecked());
     }
@@ -57,7 +61,7 @@ class PacketEventsBlockViewControllerTest {
         view.applyTileEntityVisibilityDecision(tileEntity, false, 1, view.tileEntityCheckModeToken(), 2);
         BlockViewTransition transition = view.drainTransitions().getFirst();
 
-        assertSame(transition.tileEntity(), PacketEventsBlockViewController.resolveCurrentTransitionState(view, transition, 2));
+        assertSame(transition.tileEntity(), PacketEventsBlockViewController.resolveCurrentTransitionState(transition, 2));
     }
 
     @Test
@@ -75,7 +79,7 @@ class PacketEventsBlockViewControllerTest {
         TrackedTileEntity<?> replacement = view.getTrackedTileEntity(world, location);
         int replacementLastChecked = replacement.lastChecked();
 
-        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(view, transition, 2));
+        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(transition, 2));
         assertFalse(replacement.visible());
         assertEquals(replacementLastChecked, replacement.lastChecked());
     }
@@ -95,7 +99,7 @@ class PacketEventsBlockViewControllerTest {
         worldEpoch.setRelease(4);
         TrackedTileEntity<?> replacement = view.updateOrInsertTileEntity(secondWorld, position, 2, true);
 
-        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(view, transition, worldEpoch.getAcquire()));
+        assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(transition, worldEpoch.getAcquire()));
         assertTrue(replacement.visible());
     }
 }

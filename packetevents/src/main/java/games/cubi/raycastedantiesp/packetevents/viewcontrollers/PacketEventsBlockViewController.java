@@ -16,11 +16,12 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
+import games.cubi.raycastedantiesp.core.locatables.NettyTileEntity;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
-import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.chunkparser.BlockChunkParser;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.chunkparser.ChunkParser;
@@ -164,7 +165,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         int worldEpoch = playerData.acquireWorldEpoch();
         for (BlockViewTransition transition : blockView.drainTransitions()) {
             BlockSpatial location = transition.tileEntity();
-            TrackedTileEntity<PacketEventsTileEntityReplayData> state = resolveCurrentTransitionState(blockView, transition, worldEpoch);
+            TrackedTileEntity<PacketEventsTileEntityReplayData> state = resolveCurrentTransitionState(transition, worldEpoch);
             if (state == null || state.blockID() == 0) {
                 continue;
             }
@@ -246,8 +247,10 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     }
 
     @SuppressWarnings("unchecked")
-    static @Nullable TrackedTileEntity<PacketEventsTileEntityReplayData> resolveCurrentTransitionState(BlockView blockView, BlockViewTransition transition, int currentWorldEpoch) {
-        if (transition.worldEpoch() != currentWorldEpoch || !blockView.isCurrentTileEntity(transition.tileEntity())) {
+    static @Nullable TrackedTileEntity<PacketEventsTileEntityReplayData> resolveCurrentTransitionState(BlockViewTransition transition, int currentWorldEpoch) {
+        if (transition.worldEpoch() != currentWorldEpoch
+                || !(transition.tileEntity() instanceof NettyTileEntity<?> tileEntity)
+                || tileEntity.isRemoved()) {
             return null;
         }
         return (TrackedTileEntity<PacketEventsTileEntityReplayData>) transition.tileEntity();

@@ -206,15 +206,6 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public boolean isCurrentTileEntity(TrackedTileEntity<?> tileEntity) {
-        if (!(tileEntity instanceof NettyTileEntity<?> nettyTileEntity)) {
-            return false;
-        }
-        NettyTileEntity<R> head = knownTileEntitiesByColumnBucket.get(packColumnBucket(nettyTileEntity.chunkX(), nettyTileEntity.chunkZ()));
-        return findTileEntityInBucket(head, nettyTileEntity) == nettyTileEntity;
-    }
-
-    @Override
     public Collection<TrackedTileEntity<?>> getKnownTileEntities() {
         ArrayList<TrackedTileEntity<?>> snapshot = new ArrayList<>();
         forEachTileEntity(snapshot::add);
@@ -378,6 +369,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     private void clearTrackedState() {
         chunks.clear();
+        forEachTileEntity(NettyTileEntity::markRemoved);
         knownTileEntitiesByColumnBucket.clear();
         transitions.clear();
     }
@@ -401,6 +393,9 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
             // Removing the map entry publishes removal of the whole bucket. Keep the old chain intact so readers that
             // already acquired its head can finish their weakly-consistent traversal; detached nodes are never reused.
             map.remove(bucketKey, head);
+            for (NettyTileEntity<R> current = head; current != null; current = current.nextAcquire()) {
+                current.markRemoved();
+            }
             return;
         }
 
@@ -418,6 +413,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     private NettyTileEntity<R> removeNode(SWMRInt2ObjectHashTable<NettyTileEntity<R>> map, int bucketKey, NettyTileEntity<R> head, NettyTileEntity<R> node) {
+        node.markRemoved();
         if (node != head) {
             node.unlink();
             return head;

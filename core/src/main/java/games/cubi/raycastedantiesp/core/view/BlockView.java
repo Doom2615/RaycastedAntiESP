@@ -59,8 +59,6 @@ public interface BlockView extends Clearable {
     /** Returns whether {@code modeToken} is still the current enabled generation. */
     boolean isCurrentEnabledTileEntityMode(long modeToken);
 
-    boolean isCurrentTileEntity(TrackedTileEntity<?> tileEntity);
-
     Collection<TrackedTileEntity<?>> getKnownTileEntities();
 
     /**

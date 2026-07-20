@@ -4,11 +4,26 @@ import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
 public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TrackedTileEntity<PacketReplayData> {
+    private static final VarHandle LAST_CHECKED;
+
+    static {
+        try {
+            LAST_CHECKED = MethodHandles.lookup().findVarHandle(NettyTileEntity.class, "lastChecked", int.class);
+        } catch (ReflectiveOperationException exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
+    }
+
     private volatile boolean visible;
     private volatile int lastChecked;
     private volatile char blockID;
     private volatile PacketReplayData extraData;
+
+    private static final int REMOVED = Integer.MIN_VALUE + 11;
 
     private final int x, y, z;
     public NettyTileEntity(BlockSpatial position, boolean visible, int lastChecked, char blockID) {
@@ -19,7 +34,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         this.blockID = blockID;
 
         this.visible = visible;
-        this.lastChecked = lastChecked;
+        LAST_CHECKED.set(this, lastChecked);
     }
 
     public NettyTileEntity(int x, int y, int z, boolean visible, char blockID) {
@@ -28,7 +43,7 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         this.z = z;
         this.visible = visible;
         this.blockID = blockID;
-        lastChecked = NEVER_CHECKED;
+        LAST_CHECKED.set(this, NEVER_CHECKED);
     }
 
     @Override
@@ -44,13 +59,29 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
 
     @Override
     public int lastChecked() {
-        return lastChecked;
+        return (int) LAST_CHECKED.getAcquire(this);
     }
 
     @Override
-    public TrackedTileEntity<PacketReplayData> setLastChecked(int lastChecked) {
-        this.lastChecked = lastChecked;
+    public TrackedTileEntity<PacketReplayData> setLastChecked(int checkedTick) {
+        int current = (int) LAST_CHECKED.getAcquire(this);
+        while (current != REMOVED) {
+            if (LAST_CHECKED.weakCompareAndSetRelease(this, current, checkedTick)) {
+                break;
+            }
+            current = (int) LAST_CHECKED.getAcquire(this);
+        }
         return this;
+    }
+
+    /** Marks this allocation as detached. This state is absorbing because removed nodes are never reused. */
+    public final void markRemoved() {
+        LAST_CHECKED.setRelease(this, REMOVED);
+    }
+
+    /** Consumer-side lifecycle check performed immediately before emitting a queued transition. */
+    public final boolean isRemoved() {
+        return (int) LAST_CHECKED.getAcquire(this) == REMOVED;
     }
 
     @Override
