@@ -1,0 +1,54 @@
+package games.cubi.raycastedantiesp.core.config.raycast;
+
+import org.junit.jupiter.api.Test;
+import org.spongepowered.configurate.BasicConfigurationNode;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.serialize.SerializationException;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class RaycastConfigTest {
+    @Test
+    void playerAndEntityRetentionSettingsLoadIndependently() throws SerializationException {
+        PlayerConfig playerConfig = PlayerConfig.load(entityNode(true), "checks.player");
+        EntityConfig entityConfig = EntityConfig.load(entityNode(false), "checks.entity");
+
+        assertTrue(playerConfig.keepClientEntityWhenHidden());
+        assertFalse(entityConfig.keepClientEntityWhenHidden());
+    }
+
+    @Test
+    void tileEntityConfigDoesNotRequireOrEnableClientRetention() throws SerializationException {
+        TileEntityConfig config = TileEntityConfig.load(baseNode(), "checks.tile-entity");
+
+        assertFalse(config.keepClientEntityWhenHidden());
+    }
+
+    @Test
+    void legacyConstructorKeepsDestroyBehaviorWhileNewOverloadCanRetain() {
+        RaycastConfig legacy = new RaycastConfig(true, true, 3, 8, 48, 24, 5);
+        RaycastConfig retaining = new RaycastConfig(true, true, 3, 8, 48, 24, 5, true);
+
+        assertFalse(legacy.keepClientEntityWhenHidden());
+        assertTrue(retaining.keepClientEntityWhenHidden());
+    }
+
+    private static ConfigurationNode entityNode(boolean keepClientEntityWhenHidden) throws SerializationException {
+        ConfigurationNode node = baseNode();
+        node.node("hide-sounds-when-hidden").set(true);
+        node.node("keep-client-entity-when-hidden").set(keepClientEntityWhenHidden);
+        return node;
+    }
+
+    private static ConfigurationNode baseNode() throws SerializationException {
+        ConfigurationNode node = BasicConfigurationNode.root();
+        node.node("enabled").set(true);
+        node.node("max-occluding-count").set(3);
+        node.node("always-show-radius").set(8);
+        node.node("raycast-radius").set(48);
+        node.node("hide-on-spawn-distance").set(24);
+        node.node("visible-recheck-interval-ticks").set(5);
+        return node;
+    }
+}

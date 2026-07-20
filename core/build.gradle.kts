@@ -32,6 +32,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation(project(":leafpile"))
     testImplementation(project(":logging"))
+    testImplementation("org.spongepowered:configurate-core:4.2.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("it.unimi.dsi:fastutil:8.5.18")

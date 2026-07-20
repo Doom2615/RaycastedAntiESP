@@ -5,10 +5,11 @@ import org.spongepowered.configurate.ConfigurationNode;
 public class PlayerConfig extends RaycastConfig {
     private PlayerConfig(RaycastConfig config) {
         super(config.enabled(), config.hideSoundsWhenHidden(), config.getMaxOccludingCount(), config.getAlwaysShowRadius(),
-                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks());
+                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks(),
+                config.keepClientEntityWhenHidden());
     }
 
     public static PlayerConfig load(ConfigurationNode node, String path) {
-        return new PlayerConfig(RaycastConfig.load(node, path, true));
+        return new PlayerConfig(RaycastConfig.load(node, path, true, true));
     }
 }

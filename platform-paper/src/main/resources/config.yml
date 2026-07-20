@@ -8,6 +8,7 @@ checks:
         raycast-radius: 128
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
+        keep-client-entity-when-hidden: true
     entity:
         enabled: true
         hide-sounds-when-hidden: true
@@ -16,6 +17,7 @@ checks:
         raycast-radius: 92
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
+        keep-client-entity-when-hidden: true
     tile-entity:
         enabled: true
         max-occluding-count: 3

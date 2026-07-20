@@ -5,10 +5,11 @@ import org.spongepowered.configurate.ConfigurationNode;
 public class EntityConfig extends RaycastConfig {
     private EntityConfig(RaycastConfig config) {
         super(config.enabled(), config.hideSoundsWhenHidden(), config.getMaxOccludingCount(), config.getAlwaysShowRadius(),
-                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks());
+                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks(),
+                config.keepClientEntityWhenHidden());
     }
 
     public static EntityConfig load(ConfigurationNode node, String path) {
-        return new EntityConfig(RaycastConfig.load(node, path, true));
+        return new EntityConfig(RaycastConfig.load(node, path, true, true));
     }
 }
