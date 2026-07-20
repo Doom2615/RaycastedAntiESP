@@ -93,7 +93,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         }
         PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver();
         boolean trackAllBlocks = config.getBlockProcessorConfig().trackAllBlocks();
-        ViewRegistry.initialise(() -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
+        ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
         PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
         new PaperPacketEventsBlockViewController(blockInfoResolver, trackAllBlocks, currentTickSupplier);

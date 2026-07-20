@@ -19,30 +19,4 @@ public class PacketEventsEntity extends NettyEntity<EntityType, PacketEventsEnti
     public static PacketEventsEntity createSelfEntity(PlayerData selfData, int selfEntityID, UUID selfEntityUUID) {
         return new PacketEventsEntity(selfData, selfEntityID, selfEntityUUID);
     }
-
-    @Override
-    public boolean strictlyEquals(Object other) {
-        if (this == other) return true;
-        if (!(other instanceof PacketEventsEntity that)) return false;
-        if (!this.equals(other)) return false;
-        // check xyz
-        if (!this.world().equals(that.world())) return false;
-        if (this.x() != that.x()) return false;
-        if (this.y() != that.y()) return false;
-        if (this.z() != that.z()) return false;
-
-        if (entityID() != that.entityID()) return false;
-        if (!entityUUID().equals(that.entityUUID())) return false;
-        if (isSelfEntity() != that.isSelfEntity()) return false;
-        if (entityType() != that.entityType()) return false;
-        if (visible() != that.visible()) return false;
-        if (yaw() != that.yaw()) return false;
-        if (pitch() != that.pitch()) return false;
-        if (headYaw() != that.headYaw()) return false;
-        if (velocityX() != that.velocityX()) return false;
-        if (velocityY() != that.velocityY()) return false;
-        if (velocityZ() != that.velocityZ()) return false;
-        if (onGround() != that.onGround()) return false;
-        return entityData() == that.entityData();
-    }
 }

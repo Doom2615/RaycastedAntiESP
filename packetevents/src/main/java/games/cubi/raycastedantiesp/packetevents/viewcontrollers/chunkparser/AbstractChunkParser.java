@@ -9,11 +9,11 @@ import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.chunk.TileEntity;
 import com.github.retrooper.packetevents.protocol.world.chunk.impl.v_1_18.Chunk_v1_18;
 import com.github.retrooper.packetevents.protocol.world.chunk.palette.GlobalPalette;
-import games.cubi.locatables.implementations.MutableBlockLocatable;
+import games.cubi.locatables.implementations.MutableBlockSpatialImpl;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +48,7 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
     public final @Nullable Column parse(BlockView blockView, UUID world, Column column, int minimumSectionY) {
         BaseChunk[] sections = column.getChunks();
         long[][] managedBySection = null;
-        MutableBlockLocatable key = null;
+        MutableBlockSpatialImpl key = null;
         int chunkX = column.getX();
         int chunkZ = column.getZ();
         // Shifting the chunk coordinate left by four reserves the low four bits for the local block coordinate.
@@ -91,10 +91,10 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
                         int blockY = (sectionY << 4) + localY;
                         int blockZ = blockOriginZ + localZ;
                         if (key == null) {
-                            key = new MutableBlockLocatable(world);
+                            key = new MutableBlockSpatialImpl(0, 0, 0);
                         }
-                        key.set(blockX, blockY, blockZ);
-                        TileEntityLocatable<?> state = blockView.updateOrInsertTileEntity(key, blockID, !mutatePackets);
+                        key.setBlockPosition(blockX, blockY, blockZ);
+                        TrackedTileEntity<?> state = blockView.updateOrInsertTileEntity(world, key, blockID, !mutatePackets);
                         if (!mutatePackets) {
                             blockView.recordOutboundTileEntityVisibility(state, true);
                         } else if (state != null && !state.visible()) {
@@ -113,11 +113,11 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         int retainedCount = 0;
         TileEntity[] retained = null;
         if (sourceTileEntities.length != 0 && key == null) {
-            key = new MutableBlockLocatable(world);
+            key = new MutableBlockSpatialImpl(0, 0, 0);
         }
         for (int index = 0; index < sourceTileEntities.length; index++) {
             TileEntity tileEntity = sourceTileEntities[index];
-            boolean strip = processTileEntity(blockView, blockOriginX, blockOriginZ, sections, minimumSectionY, managedBySection, tileEntity, key);
+            boolean strip = processTileEntity(blockView, world, blockOriginX, blockOriginZ, sections, minimumSectionY, managedBySection, tileEntity, key);
             if (mutatePackets && strip) {
                 if (!stripped) {
                     stripped = true;
@@ -157,8 +157,8 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         return true;
     }
 
-    private boolean processTileEntity(BlockView blockView, int blockOriginX, int blockOriginZ, BaseChunk[] sections, int minimumSectionY,
-                                      long[][] managedBySection, TileEntity tileEntity, MutableBlockLocatable key) {
+    private boolean processTileEntity(BlockView blockView, UUID world, int blockOriginX, int blockOriginZ, BaseChunk[] sections, int minimumSectionY,
+                                      long[][] managedBySection, TileEntity tileEntity, MutableBlockSpatialImpl key) {
         int packedXZ = Byte.toUnsignedInt(tileEntity.getPackedByte());
         // Modern block entities store local x in the high nibble and local z in the low nibble.
         int localX = packedXZ >>> 4;
@@ -168,12 +168,12 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
         int blockZ = blockOriginZ + localZ;
         // Arithmetic shifting divides by 16 with the required floor behavior for negative block Y coordinates.
         int sectionIndex = (blockY >> 4) - minimumSectionY;
-        key.set(blockX, blockY, blockZ);
+        key.setBlockPosition(blockX, blockY, blockZ);
         if (sectionIndex >= 0 && sectionIndex < sections.length) {
             long[] managed = managedBySection == null ? null : managedBySection[sectionIndex];
             int packed = ChunkData.packUncheckedGuarded(localX, blockY, localZ);
             if (managed != null && (managed[packed >>> 6] & 1L << packed) != 0L) {
-                TileEntityLocatable<PacketEventsTileEntityReplayData> state = tracked(blockView, key);
+                TrackedTileEntity<PacketEventsTileEntityReplayData> state = tracked(blockView, world, key);
                 if (state != null) {
                     replayData(state).setBlockEntityData(BlockEntityTypes.getById(clientVersion, tileEntity.getType()), tileEntity.getNBT());
                     return !state.visible();
@@ -196,11 +196,11 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
     }
 
     @SuppressWarnings("unchecked")
-    private static TileEntityLocatable<PacketEventsTileEntityReplayData> tracked(BlockView blockView, MutableBlockLocatable location) {
-        return (TileEntityLocatable<PacketEventsTileEntityReplayData>) blockView.getTrackedTileEntity(location);
+    private static TrackedTileEntity<PacketEventsTileEntityReplayData> tracked(BlockView blockView, UUID world, MutableBlockSpatialImpl position) {
+        return (TrackedTileEntity<PacketEventsTileEntityReplayData>) blockView.getTrackedTileEntity(world, position);
     }
 
-    private static PacketEventsTileEntityReplayData replayData(TileEntityLocatable<PacketEventsTileEntityReplayData> tileEntity) {
+    private static PacketEventsTileEntityReplayData replayData(TrackedTileEntity<PacketEventsTileEntityReplayData> tileEntity) {
         PacketEventsTileEntityReplayData replayData = tileEntity.extraData();
         if (replayData == null) {
             replayData = new PacketEventsTileEntityReplayData();

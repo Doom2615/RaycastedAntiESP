@@ -84,7 +84,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         handleBlockPackets(event, event.getUser(), playerData, world, currentTick, tileChecksEnabled);
 
         if (playerData.blockView().hasPendingTransitions()) {
-            processTileEntityTransitions(event.getUser(), playerData.blockView());
+            processTileEntityTransitions(event.getUser(), playerData);
         }
     }
 
@@ -159,10 +159,12 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         }
     }
 
-    private void processTileEntityTransitions(User viewer, BlockView blockView) {
+    private void processTileEntityTransitions(User viewer, PlayerData playerData) {
+        BlockView blockView = playerData.blockView();
+        int worldEpoch = playerData.acquireWorldEpoch();
         for (BlockViewTransition transition : blockView.drainTransitions()) {
             BlockSpatial location = transition.tileEntity();
-            TrackedTileEntity<PacketEventsTileEntityReplayData> state = resolveCurrentTransitionState(blockView, transition);
+            TrackedTileEntity<PacketEventsTileEntityReplayData> state = resolveCurrentTransitionState(blockView, transition, worldEpoch);
             if (state == null || state.blockID() == 0) {
                 continue;
             }
@@ -243,13 +245,12 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         return (TrackedTileEntity<PacketEventsTileEntityReplayData>) blockView.getTrackedTileEntity(world, position);
     }
 
-    static @Nullable TrackedTileEntity<PacketEventsTileEntityReplayData> resolveCurrentTransitionState(BlockView blockView, BlockViewTransition transition) {
-        if (!blockView.isCurrentContext(transition.worldContext()) || transition.worldContext().world() == null) {
+    @SuppressWarnings("unchecked")
+    static @Nullable TrackedTileEntity<PacketEventsTileEntityReplayData> resolveCurrentTransitionState(BlockView blockView, BlockViewTransition transition, int currentWorldEpoch) {
+        if (transition.worldEpoch() != currentWorldEpoch || !blockView.isCurrentTileEntity(transition.tileEntity())) {
             return null;
         }
-        TrackedTileEntity<PacketEventsTileEntityReplayData> state = getTrackedTileEntity(blockView, transition.worldContext().world(), transition.tileEntity());
-        // Coordinates may be reused after removal. Object identity is the allocation-free lifecycle generation because detached nodes are never reused.
-        return state == transition.tileEntity() ? state : null;
+        return (TrackedTileEntity<PacketEventsTileEntityReplayData>) transition.tileEntity();
     }
 
     private PacketEventsTileEntityReplayData ensureTileReplayData(TrackedTileEntity<PacketEventsTileEntityReplayData> tileEntity) {
