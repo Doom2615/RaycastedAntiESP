@@ -12,9 +12,11 @@ public interface TrackedTileEntity<T> extends ImmutableBlockSpatial, Clearable {
     int lastChecked();
     TrackedTileEntity<T> setLastChecked(int lastChecked);
 
+    /** Packet-thread-only structural state. */
     int blockID();
     TrackedTileEntity<T> setBlockID(char blockID);
 
+    /** Packet-thread-only replay state. */
     T extraData();
     TrackedTileEntity<T> setExtraData(T extraData);
     void clearExtraData();

@@ -21,30 +21,37 @@ public interface TrackedEntity<EntityType, PacketReplayData> extends MutableFloa
     int lastChecked();
     TrackedEntity<?, ?> setLastChecked(int lastChecked);
 
+    /** Packet-thread-only client state. */
     boolean clientVisible();
     TrackedEntity<?, ?> setClientVisible(boolean clientVisible);
 
     boolean isSelfEntity();
 
+    /** Packet-thread-only replay state. */
     float yaw();
     TrackedEntity<?, ?> setYaw(float yaw);
 
+    /** Packet-thread-only replay state. */
     float pitch();
     TrackedEntity<?, ?> setPitch(float pitch);
 
+    /** Packet-thread-only replay state. */
     float headYaw();
     TrackedEntity<?, ?> setHeadYaw(float headYaw);
 
+    /** Packet-thread-only replay state. */
     double velocityX();
     double velocityY();
     double velocityZ();
     TrackedEntity<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ);
 
+    /** Packet-thread-only replay state. */
     boolean onGround();
     TrackedEntity<?, ?> setOnGround(boolean onGround);
 
     EntityType entityType();
 
+    /** Packet-thread-only replay state. */
     int entityData();
     TrackedEntity<?, ?> setEntityData(int entityData);
 
@@ -54,12 +61,14 @@ public interface TrackedEntity<EntityType, PacketReplayData> extends MutableFloa
     void setVehicleID(int vehicleID);
     int vehicleID();
 
+    /** Packet-thread-only holder-side relationship state. */
     void addLeashedEntity(int leashedEntityID);
     void removeLeashedEntity(int leashedEntityID);
     int@Nullable[] leashedEntityIDsOrNull();
     int leashingEntity();
     void setLeashingEntity(int leashingEntityID);
 
+    /** Packet-thread-only cached packet state. */
     PacketReplayData packetReplayData();
     TrackedEntity<?, ?> setPacketReplayData(PacketReplayData packetReplayData);
 
