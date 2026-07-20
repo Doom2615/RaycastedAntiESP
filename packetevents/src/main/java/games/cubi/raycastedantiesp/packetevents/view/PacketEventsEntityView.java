@@ -2,11 +2,10 @@ package games.cubi.raycastedantiesp.packetevents.view;
 
 import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
-import games.cubi.locatables.api.Locatable;
-import games.cubi.locatables.implementations.ImmutableLocatableImpl;
-import games.cubi.locatables.implementations.MutableLocatableImpl;
+import games.cubi.locatables.api.Spatial;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
@@ -16,29 +15,33 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 public class PacketEventsEntityView extends SingleThreadedGuard implements EntityView<PacketEventsEntity> {
     private final SWMRHashTable<UUID, PacketEventsEntity> entitiesByUUID = new SWMRHashTable<>();
     private final Int2ObjectOpenHashMap<UUID> entityUUIDsByID = new Int2ObjectOpenHashMap<>();
     private final MultiThreadedQueue<EntityViewTransition> transitions = new MultiThreadedQueue<>();
     private final boolean isPlayerView;
+    private final IntSupplier worldEpochSupplier;
+    private UUID trackedWorld;
 
-    public PacketEventsEntityView(boolean isPlayerView) {
+    private PacketEventsEntityView(boolean isPlayerView, IntSupplier worldEpochSupplier) {
         super(Thread.currentThread()); // Should be player's netty thread
         this.isPlayerView = isPlayerView;
+        this.worldEpochSupplier = Logger.requireNonNull(worldEpochSupplier, "worldEpochSupplier was null", 1, this.getClass());
     }
 
-    public static PacketEventsEntityView createPlayerView() {
-        return new PacketEventsEntityView(true);
+    public static PacketEventsEntityView createPlayerView(IntSupplier worldEpochSupplier) {
+        return new PacketEventsEntityView(true, worldEpochSupplier);
     }
 
-    public static PacketEventsEntityView createEntityView() {
-        return new PacketEventsEntityView(false);
+    public static PacketEventsEntityView createEntityView(IntSupplier worldEpochSupplier) {
+        return new PacketEventsEntityView(false, worldEpochSupplier);
     }
 
     @Override
-    public void insertEntity(PacketEventsEntity entity) {
-        if (entity == null || entity.entityUUID() == null) {
+    public void insertEntity(UUID world, PacketEventsEntity entity) {
+        if (world == null || entity == null || entity.entityUUID() == null) {
             Logger.error(new RuntimeException("Attempted to insert null entity or entity with null UUID into EntityView"), 2, PacketEventsEntityView.class);
             return;
         }
@@ -46,6 +49,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
         UUID entityUUID = entity.entityUUID();
         int entityID = entity.entityID();
         guardThread();
+        ensureTrackedWorld(world);
         UUID previousUUIDForID = entityUUIDsByID.put(entityID, entityUUID);
         if (previousUUIDForID != null && !previousUUIDForID.equals(entityUUID)) {
             PacketEventsEntity previousEntityForID = entitiesByUUID.get(previousUUIDForID);
@@ -117,12 +121,9 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public Locatable getLocation(UUID entityUUID) {
+    public Spatial getPosition(UUID entityUUID) {
         PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
-        if (entity == null) {
-            return null;
-        }
-        return new ImmutableLocatableImpl(entity.world(), entity.x(), entity.y() + 0.5, entity.z());
+        return entity == null ? null : entity.getOffsetPosition();
     }
 
     @Override
@@ -143,25 +144,16 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public void setVisibility(UUID entityUUID, boolean visible, int currentTick) {
-        PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
-        if (entity == null) {
-            Logger.debug("EntityView.setVisibility missing uuid=" + entityUUID
-                    + " requestedVisible=" + visible
-                    + " tick=" + currentTick);
+    public void setVisibility(@NotNull NettyEntity<?,?> entity, boolean visible, int currentTick, int expectedWorldEpoch) {
+        if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
             return;
         }
         if (entity.isSelfEntity()) return;
-        setVisibility(entity, visible, currentTick);
-    }
-
-    @Override
-    public void setVisibility(@NotNull NettyEntityLocatable<?,?> entity, boolean visible, int currentTick) {
         if (entity.visible() != visible) {
             transitions.add(new EntityViewTransition(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
-                    entity.entityUUID(),
-                    entity.entityID()
+                    entity,
+                    expectedWorldEpoch
             ));
         }
         entity.setVisible(visible);
@@ -195,7 +187,10 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, Consumer<NettyEntityLocatable<?,?>> action) {
+    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?,?>> action) {
+        if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
+            return 0;
+        }
         if (countingActuallyNeeded) {
             return entitiesByUUID.forEachValueCounted( (entity) -> {
                 if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
@@ -237,9 +232,27 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     @Override
     public void clear() {
         guardThread();
+        trackedWorld = null;
+        clearTrackedState();
+    }
+
+    private void ensureTrackedWorld(UUID world) {
+        if (world.equals(trackedWorld)) {
+            return;
+        }
+        trackedWorld = null;
+        clearTrackedState();
+        trackedWorld = world;
+    }
+
+    private void clearTrackedState() {
         entitiesByUUID.clear();
         entityUUIDsByID.clear();
         transitions.clear();
+    }
+
+    private boolean isCurrentWorldEpoch(int expectedWorldEpoch) {
+        return PlayerData.isStableWorldEpoch(expectedWorldEpoch) && worldEpochSupplier.getAsInt() == expectedWorldEpoch;
     }
 
     private PacketEventsEntity getTrackedEntity(int entityID) {

@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
     void insertEntity(UUID world, T entity);
@@ -38,9 +39,7 @@ public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
 
     boolean isVisible(int entityID);
 
-    void setVisibility(UUID entityUUID, boolean visible, int currentTick);
-
-    void setVisibility(NettyEntityLocatable<?,?> entity, boolean visible, int currentTick);
+    void setVisibility(NettyEntity<?,?> entity, boolean visible, int currentTick, int expectedWorldEpoch);
 
     Collection<UUID> getKnownEntities();
 
@@ -58,7 +57,7 @@ public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
      *
      * @return number of entities passed to {@code action}, or 0 if {@code countingActuallyNeeded} is false.
      */
-    int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, Consumer<NettyEntityLocatable<?,?>> action);
+    int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?,?>> action);
 
     boolean hasPendingTransitions();
 
@@ -73,6 +72,6 @@ public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
     String getStringDataForDebugging();
 
     interface Factory {
-        EntityView<?> createEntityView();
+        EntityView<?> createEntityView(IntSupplier worldEpochSupplier);
     }
 }
