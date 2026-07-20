@@ -4,12 +4,12 @@ import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Objects;
 import java.util.UUID;
@@ -17,20 +17,11 @@ import java.util.function.IntSupplier;
 
 public class PlayerData {
     public static final int INVALID_WORLD_EPOCH = -1;
-    private static final VarHandle WORLD_EPOCH;
-
-    static {
-        try {
-            WORLD_EPOCH = MethodHandles.lookup().findVarHandle(PlayerData.class, "worldEpoch", int.class);
-        } catch (ReflectiveOperationException exception) {
-            throw new ExceptionInInitializerError(exception);
-        }
-    }
 
     private final UUID playerUUID;
     private final int joinTick;
     private volatile boolean hasBypassPermission;
-    private volatile boolean connected = true;
+    private volatile boolean connected;
     private final ThreadSafeLocatable ownLocation;
 
     private final BlockView blockView;
@@ -38,13 +29,14 @@ public class PlayerData {
     private final EntityView<?> playerView;
     private final NettyData nettyData;
     // Even positive values are stable world sessions; odd values mean the views are being replaced.
-    private int worldEpoch;
+    private volatile int worldEpoch; private static final VarHandle WORLD_EPOCH = VarHandler.get(PlayerData.class, "worldEpoch", int.class);
     private UUID viewWorld;
 
     PlayerData(UUID player, boolean hasBypassPermission, int joinTick, int selfEntityID, PlayerRegistry.SelfEntityCreator selfEntityCreator) {
         this.joinTick = joinTick;
         this.playerUUID = player;
         this.hasBypassPermission = hasBypassPermission;
+        connected = true;
 
         IntSupplier worldEpochSupplier = this::acquireWorldEpoch;
         blockView = ViewRegistry.createBlockView(worldEpochSupplier);
@@ -193,7 +185,7 @@ public class PlayerData {
         return "PlayerData{" +
                 "playerUUID=" + playerUUID +
                 ", joinTick=" + joinTick +
-                ", hasBypassPermission=" + hasBypassPermission +
+                ", hasBypassPermission=" + hasBypassPermission() +
                 ", ownLocation=" + ownLocation +
                 ", blockView=" + blockView +
                 ", entityView=" + entityView +
