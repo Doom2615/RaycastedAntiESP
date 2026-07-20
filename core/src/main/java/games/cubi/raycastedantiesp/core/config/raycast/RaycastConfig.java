@@ -13,9 +13,17 @@ public class RaycastConfig implements Config {
     private final short raycastRadius;
     private final short hideOnSpawnDistance;
     private final short visibleRecheckIntervalTicks;
+    private final boolean keepClientEntityWhenHidden;
 
     public RaycastConfig(boolean enabled, boolean hideSoundsWhenHidden, int maxOccludingCount, int alwaysShowRadius,
                          int raycastRadius, int hideOnSpawnDistance, int visibleRecheckIntervalTicks) {
+        this(enabled, hideSoundsWhenHidden, maxOccludingCount, alwaysShowRadius, raycastRadius, hideOnSpawnDistance,
+                visibleRecheckIntervalTicks, false);
+    }
+
+    public RaycastConfig(boolean enabled, boolean hideSoundsWhenHidden, int maxOccludingCount, int alwaysShowRadius,
+                         int raycastRadius, int hideOnSpawnDistance, int visibleRecheckIntervalTicks,
+                         boolean keepClientEntityWhenHidden) {
         this.enabled = enabled;
         this.hideSoundsWhenHidden = hideSoundsWhenHidden;
         this.maxOccludingCount = (byte) maxOccludingCount;
@@ -23,9 +31,15 @@ public class RaycastConfig implements Config {
         this.raycastRadius = (short) raycastRadius;
         this.hideOnSpawnDistance = (short) hideOnSpawnDistance;
         this.visibleRecheckIntervalTicks = (short) visibleRecheckIntervalTicks;
+        this.keepClientEntityWhenHidden = keepClientEntityWhenHidden;
     }
 
     protected static RaycastConfig load(ConfigurationNode node, String path, boolean hasHideSoundsWhenHidden) {
+        return load(node, path, hasHideSoundsWhenHidden, false);
+    }
+
+    protected static RaycastConfig load(ConfigurationNode node, String path, boolean hasHideSoundsWhenHidden,
+                                        boolean hasKeepClientEntityWhenHidden) {
         int maxOccludingCount = ConfigReader.integer(ConfigReader.node(node, "max-occluding-count"), path + ".max-occluding-count");
         if (maxOccludingCount < 0 || maxOccludingCount > Byte.MAX_VALUE) {
             Logger.warning(path + ".max-occluding-count must be between 0 and " + Byte.MAX_VALUE + " but was " + maxOccludingCount +". Defaulting to 3.", 4, RaycastConfig.class);
@@ -58,7 +72,8 @@ public class RaycastConfig implements Config {
                 alwaysShowRadius,
                 raycastRadius,
                 hideOnSpawnDistance,
-                visibleRecheckIntervalTicks
+                visibleRecheckIntervalTicks,
+                hasKeepClientEntityWhenHidden && ConfigReader.bool(ConfigReader.node(node, "keep-client-entity-when-hidden"), path + ".keep-client-entity-when-hidden")
         );
     }
 
@@ -88,5 +103,9 @@ public class RaycastConfig implements Config {
 
     public short getVisibleRecheckIntervalTicks() {
         return visibleRecheckIntervalTicks;
+    }
+
+    public boolean keepClientEntityWhenHidden() {
+        return keepClientEntityWhenHidden;
     }
 }

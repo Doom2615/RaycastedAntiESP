@@ -591,8 +591,16 @@ public abstract class PacketEntityViewController<P> {
         resendPassengerStateIfClientVisible(vehicle, playerData);
     }
 
+    private boolean keepingClientEntityWhenHidden(NettyEntity<?,?> entity, PlayerData data) {
+        if (entityConfig.keepClientEntityWhenHidden() == playerConfig.keepClientEntityWhenHidden()) {
+            return entityConfig.keepClientEntityWhenHidden();
+        }
+        EntityView<?> view = data.viewFromEntityID(entity.entityID());
+        return getCorrectConfig(view).keepClientEntityWhenHidden();
+    }
+
     protected void resendPassengerStateIfClientVisible(NettyEntity<?,?> vehicle, PlayerData playerData) {
-        if (!vehicle.clientVisible()) {
+        if (!vehicle.clientVisible() || (keepingClientEntityWhenHidden(vehicle, playerData) && !vehicle.visible())) {
             return;
         }
         sendEntityPassengerPacket(vehicle.entityID(), collectClientVisiblePassengers(vehicle.passengerIDs(), playerData), playerData);
@@ -611,7 +619,7 @@ public abstract class PacketEntityViewController<P> {
         }
         for (int passengerID : passengerIDs) {
             NettyEntity<?,?> passenger = playerData.entityFromID(passengerID);
-            if (passenger != null && (passenger.clientVisible() || passenger.entityID() == entityBeingShownID)) {
+            if (passenger != null && ((passenger.clientVisible() && (!keepingClientEntityWhenHidden(passenger, playerData) || passenger.visible())) || passenger.entityID() == entityBeingShownID)) {
                 visiblePassengers.add(passengerID);
             }
         }
