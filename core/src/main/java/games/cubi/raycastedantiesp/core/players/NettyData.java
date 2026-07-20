@@ -18,7 +18,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
 import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
@@ -178,15 +177,7 @@ public class NettyData implements Clearable {
     // START Netty entity spawn task queue:
     //
     private final Int2ObjectArrayMap<EntitySpawnTask> pendingPostEntitySpawnTasksByEntityID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here. Can't be the more generic Int2ObjectMap because that doesn't expose a fast iterator.
-    private volatile boolean evictPendingPostSpawnTasksOnNextPacket = false;
-    private static final VarHandle EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE; //TBH there is minimal advantage to using a VarHandle over an AtomicBoolean here, just felt like it.
-    static {
-        try {
-            EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE = MethodHandles.lookup().findVarHandle( NettyData.class, "evictPendingPostSpawnTasksOnNextPacket", boolean.class);
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
+    private volatile boolean evictPendingPostSpawnTasksOnNextPacket; private static final VarHandle EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE = VarHandler.get(NettyData.class, "evictPendingPostSpawnTasksOnNextPacket", boolean.class);
     /**
      * This is intended for reconciliation tasks due to Minecraft sending packets out of order. For example, {@link Packets#ENTITY_EQUIPMENT} is sent before the corresponding {@link Packets#SPAWN_ENTITY} packet, so caching of the equipment packet must await the spawn packet.
      * @param entityID The entity ID to associate the task with. Immediately after a {@link Packets#SPAWN_ENTITY} packet is processed for this entity ID, the task will be consumed and run.
@@ -212,11 +203,12 @@ public class NettyData implements Clearable {
     }
 
     public void evictPendingPostSpawnTasksIfRequired(int currentTick) {
-        if (EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.compareAndSet(this, true, false)) evictOldPendingPostSpawnTasks(currentTick);
+        if ((boolean) EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.getOpaque(this)
+                && (boolean) EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.compareAndExchangeAcquire(this, true, false)) evictOldPendingPostSpawnTasks(currentTick);
     }
 
     public void markPendingPostSpawnTasksForEviction() {
-        evictPendingPostSpawnTasksOnNextPacket = true;
+        EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.setOpaque(this, true);
     }
 
     public EntitySpawnTask consumePendingPostSpawnTasksForEntity(int entityID) {
