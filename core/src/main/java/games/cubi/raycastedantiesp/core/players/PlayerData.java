@@ -9,9 +9,25 @@ import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 
 public class PlayerData {
+    public static final int INVALID_WORLD_EPOCH = -1;
+    private static final VarHandle WORLD_EPOCH;
+
+    static {
+        try {
+            WORLD_EPOCH = MethodHandles.lookup().findVarHandle(PlayerData.class, "worldEpoch", int.class);
+        } catch (ReflectiveOperationException exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
+    }
+
     private final UUID playerUUID;
     private final int joinTick;
     private volatile boolean hasBypassPermission;
@@ -22,15 +38,19 @@ public class PlayerData {
     private final EntityView<?> entityView;
     private final EntityView<?> playerView;
     private final NettyData nettyData;
+    // Even positive values are stable world sessions; odd values mean the views are being replaced.
+    private int worldEpoch;
+    private UUID viewWorld;
 
     PlayerData(UUID player, boolean hasBypassPermission, int joinTick, int selfEntityID, PlayerRegistry.SelfEntityCreator selfEntityCreator) {
         this.joinTick = joinTick;
         this.playerUUID = player;
         this.hasBypassPermission = hasBypassPermission;
 
-        blockView = ViewRegistry.createBlockView();
-        entityView = ViewRegistry.createEntityView();
-        playerView = ViewRegistry.createPlayerEntityView();
+        IntSupplier worldEpochSupplier = this::acquireWorldEpoch;
+        blockView = ViewRegistry.createBlockView(worldEpochSupplier);
+        entityView = ViewRegistry.createEntityView(worldEpochSupplier);
+        playerView = ViewRegistry.createPlayerEntityView(worldEpochSupplier);
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
         NettyEntity<?, ?> selfEntity = Logger.requireNonNull(
                 selfEntityCreator.createSelfEntity(this, selfEntityID, player),
@@ -55,6 +75,53 @@ public class PlayerData {
 
     public BlockView blockView() {
         return blockView;
+    }
+
+    /** Acquire-reads the current player-wide view epoch. */
+    public int acquireWorldEpoch() {
+        return (int) WORLD_EPOCH.getAcquire(this);
+    }
+
+    /**
+     * Returns a stable epoch for {@code expectedWorld}, or {@link #INVALID_WORLD_EPOCH} when the world session is not usable.
+     */
+    public int tryAcquireWorldEpochFor(UUID expectedWorld) {
+        int before = acquireWorldEpoch();
+        if (!isStableWorldEpoch(before)) {
+            return INVALID_WORLD_EPOCH;
+        }
+        UUID currentWorld = viewWorld;
+        int after = acquireWorldEpoch();
+        if (before != after || !Objects.equals(currentWorld, expectedWorld)) {
+            return INVALID_WORLD_EPOCH;
+        }
+        return before;
+    }
+
+    public static boolean isStableWorldEpoch(int epoch) {
+        return epoch != 0 && (epoch & 1) == 0;
+    }
+
+    /** Structural-writer operation performed before clearing all world-scoped views. */
+    public void beginWorldTransition() {
+        int current = acquireWorldEpoch();
+        if ((current & 1) != 0) { //current is odd
+            throw new IllegalStateException("World transition already in progress");
+        }
+        WORLD_EPOCH.setRelease(this, current + 1);
+        // Keep subsequent view-clearing writes behind the invalidating odd epoch.
+        VarHandle.releaseFence();
+        viewWorld = null;
+    }
+
+    /** Structural-writer operation performed after all world-scoped views have been cleared. */
+    public void completeWorldTransition(UUID world) {
+        int current = acquireWorldEpoch();
+        if ((current & 1) == 0) { //current is even
+            throw new IllegalStateException("No world transition in progress");
+        }
+        viewWorld = world;
+        WORLD_EPOCH.setRelease(this, current + 1);
     }
 
     public void updateOwnLocation(UUID world, double x, double y, double z) {
@@ -87,6 +154,10 @@ public class PlayerData {
 
     public void markDisconnected() {
         connected = false;
+        int current = acquireWorldEpoch();
+        if ((current & 1) == 0) {
+            WORLD_EPOCH.setRelease(this, current + 1);
+        }
     }
 
     /**
