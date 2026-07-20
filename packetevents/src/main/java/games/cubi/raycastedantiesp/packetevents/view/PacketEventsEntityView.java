@@ -177,18 +177,8 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
 
     @Override
     public int[] getKnownEntityIDs() {
-        /*
-        guardThread();
-        // This is only called while clearing on the Netty thread, so size()
-        // is stable and can be used as the exact output array length.
-        int[] entityIDs = new int[entityUUIDsByID.size()];
-        int[] count = new int[1];
-        entityUUIDsByID.forEachKey(entityID -> {
-            entityIDs[count[0]++] = entityID;
-        });*/
         guardThread();
         return entityUUIDsByID.keySet().toIntArray();
-        //return entityIDs;
     }
 
     @Override
