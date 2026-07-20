@@ -11,8 +11,9 @@ import com.github.retrooper.packetevents.protocol.world.chunk.HeightmapType;
 import com.github.retrooper.packetevents.protocol.world.chunk.TileEntity;
 import com.github.retrooper.packetevents.protocol.world.chunk.impl.v_1_18.Chunk_v1_18;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
+import games.cubi.locatables.implementations.ImmutableBlockSpatialImpl;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
-import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChunkParserTest {
+    private static final IntSupplier STABLE_WORLD_EPOCH = () -> 2;
     private static final TestPacketEventsAPI PACKET_EVENTS_API = new TestPacketEventsAPI();
     private static final BlockInfoResolver RESOLVER = new BlockInfoResolver() {
         @Override
@@ -64,13 +67,13 @@ class ChunkParserTest {
         section.set(3, 2, 1, 99);
         TileEntity tileEntity = new TileEntity((byte) (3 << 4 | 1), (short) 2, 0, null);
         Column column = new Column(0, 0, true, new BaseChunk[]{section}, new TileEntity[]{tileEntity});
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
 
         Column replacement = new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, column, 0);
 
         assertNull(replacement);
         assertEquals(99, section.getBlockId(3, 2, 1));
-        var tracked = view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 1));
+        var tracked = view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
         assertNotNull(tracked);
         assertTrue(tracked.visible());
         assertNotNull(tracked.extraData());
@@ -83,7 +86,7 @@ class ChunkParserTest {
         section.set(3, 2, 1, 99);
         TileEntity tileEntity = new TileEntity((byte) (3 << 4 | 1), (short) 2, 0, null);
         Column column = new Column(0, 0, true, new BaseChunk[]{section}, new TileEntity[]{tileEntity});
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
 
         Column replacement = new BlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, column, 0);
@@ -91,7 +94,7 @@ class ChunkParserTest {
         assertNotNull(replacement);
         assertEquals(1, section.getBlockId(3, 2, 1));
         assertEquals(0, replacement.getTileEntities().length);
-        assertFalse(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 1)).visible());
+        assertFalse(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
     }
 
     @Test
@@ -101,12 +104,12 @@ class ChunkParserTest {
         section.set(3, 2, 1, 1);
         section.set(3, 1, 2, 0);
         Column column = new Column(0, 0, true, new BaseChunk[]{section}, new TileEntity[0]);
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
 
         new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, column, 0);
 
-        assertTrue(view.isBlockOccluding(world, 3, 2, 1));
-        assertFalse(view.isBlockOccluding(world, 3, 1, 2));
+        assertTrue(view.isBlockOccluding(new ImmutableBlockLocatable(world, 3, 2, 1)));
+        assertFalse(view.isBlockOccluding(new ImmutableBlockLocatable(world, 3, 1, 2)));
     }
 
     @Test
@@ -114,25 +117,25 @@ class ChunkParserTest {
         UUID world = UUID.randomUUID();
         Chunk_v1_18 nonMutatingSection = airSection();
         nonMutatingSection.set(1, 2, 3, 1);
-        PacketEventsBlockView nonMutatingView = new PacketEventsBlockView(RESOLVER, false);
+        PacketEventsBlockView nonMutatingView = new PacketEventsBlockView(RESOLVER, false, STABLE_WORLD_EPOCH);
         Column nonMutatingColumn = new Column(0, 0, true, new BaseChunk[]{nonMutatingSection}, new TileEntity[0]);
 
         assertNull(new NonMutatingOcclusionChunkParser(RESOLVER, ignored -> 2).parse(nonMutatingView, world, nonMutatingColumn, 0));
-        assertTrue(nonMutatingView.isBlockOccluding(world, 1, 2, 3));
+        assertTrue(nonMutatingView.isBlockOccluding(new ImmutableBlockLocatable(world, 1, 2, 3)));
         assertEquals(1, nonMutatingSection.getBlockId(1, 2, 3));
 
         Chunk_v1_18 mutatingSection = airSection();
         mutatingSection.set(1, 2, 3, 1);
-        PacketEventsBlockView mutatingView = new PacketEventsBlockView(RESOLVER, false);
+        PacketEventsBlockView mutatingView = new PacketEventsBlockView(RESOLVER, false, STABLE_WORLD_EPOCH);
         Column mutatingColumn = new Column(0, 0, true, new BaseChunk[]{mutatingSection}, new TileEntity[0]);
         assertNull(new OcclusionChunkParser(RESOLVER, ignored -> 2).parse(mutatingView, world, mutatingColumn, 0));
-        assertTrue(mutatingView.isBlockOccluding(world, 1, 2, 3));
+        assertTrue(mutatingView.isBlockOccluding(new ImmutableBlockLocatable(world, 1, 2, 3)));
     }
 
     @Test
     void mutatingReingestionKeepsExistingVisibleTileVisible() {
         UUID world = UUID.randomUUID();
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         Chunk_v1_18 initial = airSection();
         initial.set(3, 2, 1, 99);
         TileEntity tile = new TileEntity((byte) (3 << 4 | 1), (short) 2, 0, null);
@@ -147,13 +150,13 @@ class ChunkParserTest {
 
         assertNull(replacement);
         assertEquals(99, resend.getBlockId(3, 2, 1));
-        assertTrue(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 1)).visible());
+        assertTrue(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
     }
 
     @Test
     void authoritativeEmptySectionRemovesPreviouslyTrackedTile() {
         UUID world = UUID.randomUUID();
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         Chunk_v1_18 lower = new Chunk_v1_18();
         Chunk_v1_18 upper = airSection();
         upper.set(3, 1, 2, 99);
@@ -161,23 +164,23 @@ class ChunkParserTest {
         new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(
                 view, world, new Column(0, 0, true, new BaseChunk[]{lower, upper}, new TileEntity[]{tile}), 0
         );
-        ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, 3, 17, 2);
-        assertNotNull(view.getTrackedTileEntity(location));
+        ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 17, 2);
+        assertNotNull(view.getTrackedTileEntity(world, location));
 
         new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(
                 view, world, new Column(0, 0, true, new BaseChunk[]{new Chunk_v1_18(), new Chunk_v1_18()}, new TileEntity[0]), 0
         );
 
-        assertNull(view.getTrackedTileEntity(location));
-        assertFalse(view.isBlockOccluding(location));
+        assertNull(view.getTrackedTileEntity(world, location));
+        assertFalse(view.isBlockOccluding(new ImmutableBlockLocatable(world, location.blockX(), location.blockY(), location.blockZ())));
     }
 
     @Test
     void nonMutatingParserRecordsExistingHiddenTileAsOutboundVisibleWithoutChangingColumn() {
         UUID world = UUID.randomUUID();
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
-        ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, 3, 2, 1);
-        TileEntityLocatable<?> tracked = view.updateOrInsertTileEntity(location, 99, false);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
+        ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 2, 1);
+        TrackedTileEntity<?> tracked = view.updateOrInsertTileEntity(world, location, 99, false);
         tracked.setLastChecked(42);
         Chunk_v1_18 section = airSection();
         section.set(3, 2, 1, 99);
@@ -195,9 +198,9 @@ class ChunkParserTest {
         assertSame(section, column.getChunks()[0]);
         assertSame(tileEntities, column.getTileEntities());
         assertTrue(tracked.visible());
-        assertEquals(TileEntityLocatable.NEVER_CHECKED, tracked.lastChecked());
+        assertEquals(TrackedTileEntity.NEVER_CHECKED, tracked.lastChecked());
         assertEquals(99, section.getBlockId(3, 2, 1));
-        assertNull(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 4, 2, 1)));
+        assertNull(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(4, 2, 1)));
     }
 
     @Test
@@ -207,29 +210,29 @@ class ChunkParserTest {
 
         Chunk_v1_18 nonMutatingSection = airSection();
         nonMutatingSection.set(3, 2, 1, 99);
-        PacketEventsBlockView nonMutatingView = new PacketEventsBlockView(RESOLVER, false);
+        PacketEventsBlockView nonMutatingView = new PacketEventsBlockView(RESOLVER, false, STABLE_WORLD_EPOCH);
         Column nonMutatingReplacement = new NonMutatingOcclusionChunkParser(RESOLVER, ignored -> 1).parse(
                 nonMutatingView, world, new Column(0, 0, true, new BaseChunk[]{nonMutatingSection}, new TileEntity[]{tile}), 0
         );
         assertNull(nonMutatingReplacement);
-        assertTrue(nonMutatingView.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 1)).visible());
+        assertTrue(nonMutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
 
         Chunk_v1_18 mutatingSection = airSection();
         mutatingSection.set(3, 2, 1, 99);
-        PacketEventsBlockView mutatingView = new PacketEventsBlockView(RESOLVER, false);
+        PacketEventsBlockView mutatingView = new PacketEventsBlockView(RESOLVER, false, STABLE_WORLD_EPOCH);
         mutatingView.applyTileEntityCheckMode(true, 0);
         Column mutatingReplacement = new OcclusionChunkParser(RESOLVER, ignored -> 1).parse(
                 mutatingView, world, new Column(0, 0, true, new BaseChunk[]{mutatingSection}, new TileEntity[]{tile}), 0
         );
         assertNotNull(mutatingReplacement);
         assertEquals(1, mutatingSection.getBlockId(3, 2, 1));
-        assertFalse(mutatingView.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 1)).visible());
+        assertFalse(mutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
     }
 
     @Test
     void modernPackedTileCoordinatesSupportNegativeChunksAndY() {
         UUID world = UUID.randomUUID();
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         Chunk_v1_18 section = airSection();
         section.set(15, 15, 14, 99);
         TileEntity tile = new TileEntity((byte) (15 << 4 | 14), (short) -17, 0, null);
@@ -238,7 +241,7 @@ class ChunkParserTest {
                 view, world, new Column(-2, -3, true, new BaseChunk[]{section}, new TileEntity[]{tile}), -2
         );
 
-        var tracked = view.getTrackedTileEntity(new ImmutableBlockLocatable(world, -17, -17, -34));
+        var tracked = view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(-17, -17, -34));
         assertNotNull(tracked);
         assertNotNull(tracked.extraData());
     }
@@ -246,7 +249,7 @@ class ChunkParserTest {
     @Test
     void mutatingParserCompactsManagedAndInvalidEntriesWhileRetainingUnmanagedData() {
         UUID world = UUID.randomUUID();
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
         Chunk_v1_18 section = airSection();
         section.set(1, 2, 1, 99);
@@ -264,9 +267,9 @@ class ChunkParserTest {
         assertEquals(1, replacement.getTileEntities().length);
         assertSame(unmanaged, replacement.getTileEntities()[0]);
         assertEquals(0, section.getBlockId(3, 2, 3));
-        assertNotNull(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 1, 2, 1)).extraData());
-        assertNull(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 2, 2, 2)));
-        assertNull(view.getTrackedTileEntity(new ImmutableBlockLocatable(world, 3, 2, 3)));
+        assertNotNull(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(1, 2, 1)).extraData());
+        assertNull(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(2, 2, 2)));
+        assertNull(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 3)));
     }
 
     @Test
@@ -292,7 +295,7 @@ class ChunkParserTest {
     }
 
     private static PacketEventsBlockView enabledView() {
-        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true);
+        PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
         return view;
     }

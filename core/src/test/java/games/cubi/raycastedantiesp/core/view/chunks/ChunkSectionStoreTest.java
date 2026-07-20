@@ -1,6 +1,8 @@
 package games.cubi.raycastedantiesp.core.view.chunks;
 
 import games.cubi.locatables.api.BlockLocatable;
+import games.cubi.locatables.api.BlockSpatial;
+import games.cubi.locatables.implementations.ImmutableBlockSpatialImpl;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
@@ -9,6 +11,7 @@ import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkDataImpl;
 import games.cubi.raycastedantiesp.core.chunks.blocks.CharArrayBlockChunkData;
 import games.cubi.raycastedantiesp.core.locatables.NettyTileEntity;
+import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChunkSectionStoreTest {
+    private static final IntSupplier STABLE_WORLD_EPOCH = () -> 2;
     private static final BlockInfoResolver ODD_OCCLUDING = new BlockInfoResolver() {
         @Override
         public boolean isOccluding(int blockStateID) {
@@ -281,6 +286,33 @@ class ChunkSectionStoreTest {
     }
 
     @Test
+    void worldEpochRejectsVisibilityResultCapturedBeforeClear() {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        TestBlockView view = new TestBlockView(ODD_OCCLUDING, false, worldEpoch::getAcquire);
+        UUID firstWorld = UUID.randomUUID();
+        UUID secondWorld = UUID.randomUUID();
+        ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(1, 64, 2);
+        view.applyTileEntityCheckMode(true, 0);
+        TestTileEntity original = view.updateOrInsertTileEntity(firstWorld, position, 99, true);
+        long modeToken = view.tileEntityCheckModeToken();
+        int staleEpoch = worldEpoch.getAcquire();
+
+        int processed = view.updateVisibilityForEachNeedingRecheck(-1, 1, modeToken, staleEpoch, ignored -> {
+            worldEpoch.setRelease(3);
+            view.clear();
+            worldEpoch.setRelease(4);
+            view.updateOrInsertTileEntity(secondWorld, position, 100, true);
+            return BlockView.VisibilityResolver.HIDE;
+        });
+
+        assertEquals(1, processed);
+        assertTrue(original.visible());
+        assertTrue(view.getTrackedTileEntity(secondWorld, position).visible());
+        assertTrue(worldEpoch.getAcquire() > staleEpoch);
+        assertFalse(view.hasPendingTransitions());
+    }
+
+    @Test
     void authoritativeSectionPruningRemovesAbsentAndOutOfRangeTilesWhilePreservingCollisions() {
         TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
         UUID world = UUID.randomUUID();
@@ -334,33 +366,55 @@ class ChunkSectionStoreTest {
     }
 
     private static final class TestBlockView extends AbstractBlockView<TestExtraData, TestTileEntity> {
+        private final IntSupplier worldEpochSupplier;
+
         private TestBlockView(BlockInfoResolver blockInfoResolver, boolean trackAllBlocks) {
-            super(blockInfoResolver, trackAllBlocks);
+            this(blockInfoResolver, trackAllBlocks, STABLE_WORLD_EPOCH);
+        }
+
+        private TestBlockView(BlockInfoResolver blockInfoResolver, boolean trackAllBlocks, IntSupplier worldEpochSupplier) {
+            super(blockInfoResolver, trackAllBlocks, worldEpochSupplier);
+            this.worldEpochSupplier = worldEpochSupplier;
         }
 
         @Override
-        protected TestTileEntity createTrackedTileEntity(BlockLocatable location, int blockID, boolean visible) {
-            return new TestTileEntity(location, visible, blockID);
+        protected TestTileEntity createTrackedTileEntity(BlockSpatial position, int blockID, boolean visible) {
+            return new TestTileEntity(position, visible, blockID);
         }
 
-        @Override
-        protected TestTileEntity createTrackedTileEntity(UUID world, int x, int y, int z, int blockID) {
-            return new TestTileEntity(world, x, y, z, blockID);
+        private TestTileEntity updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew) {
+            return updateOrInsertTileEntity(location.world(), location, blockID, visibleIfNew);
+        }
+
+        private void removeTileEntity(BlockLocatable location) {
+            removeTileEntity(location.world(), location);
+        }
+
+        private TestTileEntity getTrackedTileEntity(BlockLocatable location) {
+            return getTrackedTileEntity(location.world(), location);
+        }
+
+        private boolean isVisible(BlockLocatable location, int currentTick) {
+            return isVisible(location.world(), location, currentTick);
+        }
+
+        private boolean isBlockOccluding(UUID world, int x, int y, int z) {
+            return isBlockOccluding(new ImmutableBlockLocatable(world, x, y, z));
+        }
+
+        private void applyTileEntityVisibilityDecision(BlockLocatable location, boolean visible, int currentTick) {
+            TestTileEntity tileEntity = getTrackedTileEntity(location);
+            applyTileEntityVisibilityDecision(tileEntity, visible, currentTick, tileEntityCheckModeToken(), worldEpochSupplier.getAsInt());
+        }
+
+        private int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, long modeToken, BlockView.VisibilityResolver action) {
+            return updateVisibilityForEachNeedingRecheck(recheckTicks, currentTick, modeToken, worldEpochSupplier.getAsInt(), action);
         }
     }
 
     private static final class TestTileEntity extends NettyTileEntity<TestExtraData> {
-        private TestTileEntity(BlockLocatable location, boolean visible, int blockID) {
-            super(location, visible, games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable.NEVER_CHECKED, blockID);
-        }
-
-        private TestTileEntity(UUID world, int x, int y, int z, int blockID) {
-            super(world, x, y, z, false, blockID);
-        }
-
-        @Override
-        public boolean strictlyEquals(Object other) {
-            return equals(other);
+        private TestTileEntity(BlockSpatial position, boolean visible, int blockID) {
+            super(position, visible, TrackedTileEntity.NEVER_CHECKED, blockID);
         }
     }
 
