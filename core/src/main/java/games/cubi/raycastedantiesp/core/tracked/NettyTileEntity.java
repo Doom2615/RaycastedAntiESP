@@ -3,25 +3,16 @@ package games.cubi.raycastedantiesp.core.tracked;
 import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+/** Tile visibility and lifecycle are shared with the engine; block and replay data are packet-thread-only. */
 public abstract class NettyTileEntity<PacketReplayData extends Clearable> extends InvasivelyLinkedSWMRList<NettyTileEntity<PacketReplayData>> implements TrackedTileEntity<PacketReplayData> {
-    private static final VarHandle LAST_CHECKED;
-
-    static {
-        try {
-            LAST_CHECKED = MethodHandles.lookup().findVarHandle(NettyTileEntity.class, "lastChecked", int.class);
-        } catch (ReflectiveOperationException exception) {
-            throw new ExceptionInInitializerError(exception);
-        }
-    }
-
     private volatile boolean visible;
-    private volatile int lastChecked;
-    private volatile char blockID;
-    private volatile PacketReplayData extraData;
+    private volatile int lastChecked; private static final VarHandle LAST_CHECKED = VarHandler.get(NettyTileEntity.class, "lastChecked", int.class);
+    private char blockID;
+    private PacketReplayData extraData;
 
     private static final int REMOVED = Integer.MIN_VALUE + 11;
 
@@ -32,7 +23,6 @@ public abstract class NettyTileEntity<PacketReplayData extends Clearable> extend
         z = position.blockZ();
 
         this.blockID = blockID;
-
         this.visible = visible;
         LAST_CHECKED.set(this, lastChecked);
     }
