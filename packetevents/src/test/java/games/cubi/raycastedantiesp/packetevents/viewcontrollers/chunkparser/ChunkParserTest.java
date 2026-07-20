@@ -180,7 +180,7 @@ class ChunkParserTest {
         UUID world = UUID.randomUUID();
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 2, 1);
-        TrackedTileEntity<?> tracked = view.updateOrInsertTileEntity(world, location, 99, false);
+        TrackedTileEntity<?> tracked = view.updateOrInsertTileEntity(world, location, (char) 99, false);
         tracked.setLastChecked(42);
         Chunk_v1_18 section = airSection();
         section.set(3, 2, 1, 99);

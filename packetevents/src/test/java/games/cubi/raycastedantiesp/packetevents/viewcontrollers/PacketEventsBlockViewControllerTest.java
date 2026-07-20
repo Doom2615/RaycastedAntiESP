@@ -32,13 +32,13 @@ class PacketEventsBlockViewControllerTest {
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
-        view.updateOrInsertTileEntity(world, location, 1, true);
+        view.updateOrInsertTileEntity(world, location, (char) 1, true);
         TrackedTileEntity<?> original = view.getTrackedTileEntity(world, location);
         view.applyTileEntityVisibilityDecision(original, false, 1, view.tileEntityCheckModeToken(), 2);
         BlockViewTransition transition = view.drainTransitions().getFirst();
 
         view.removeTileEntity(world, location);
-        view.updateOrInsertTileEntity(world, location, 2, true);
+        view.updateOrInsertTileEntity(world, location, (char) 2, true);
         TrackedTileEntity<?> replacement = view.getTrackedTileEntity(world, location);
         int replacementLastChecked = replacement.lastChecked();
 
@@ -57,7 +57,7 @@ class PacketEventsBlockViewControllerTest {
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
-        TrackedTileEntity<?> tileEntity = view.updateOrInsertTileEntity(world, location, 1, true);
+        TrackedTileEntity<?> tileEntity = view.updateOrInsertTileEntity(world, location, (char) 1, true);
         view.applyTileEntityVisibilityDecision(tileEntity, false, 1, view.tileEntityCheckModeToken(), 2);
         BlockViewTransition transition = view.drainTransitions().getFirst();
 
@@ -70,12 +70,12 @@ class PacketEventsBlockViewControllerTest {
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
         view.applyTileEntityCheckMode(true, 0);
-        TrackedTileEntity<?> original = view.updateOrInsertTileEntity(world, location, 1, false);
+        TrackedTileEntity<?> original = view.updateOrInsertTileEntity(world, location, (char) 1, false);
         view.applyTileEntityVisibilityDecision(original, true, 1, view.tileEntityCheckModeToken(), 2);
         BlockViewTransition transition = view.drainTransitions().getFirst();
 
         view.removeTileEntity(world, location);
-        view.updateOrInsertTileEntity(world, location, 2, false);
+        view.updateOrInsertTileEntity(world, location, (char) 2, false);
         TrackedTileEntity<?> replacement = view.getTrackedTileEntity(world, location);
         int replacementLastChecked = replacement.lastChecked();
 
@@ -92,12 +92,12 @@ class PacketEventsBlockViewControllerTest {
         AtomicInteger worldEpoch = new AtomicInteger(2);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, worldEpoch::getAcquire);
         view.applyTileEntityCheckMode(true, 0);
-        TrackedTileEntity<?> original = view.updateOrInsertTileEntity(firstWorld, position, 1, true);
+        TrackedTileEntity<?> original = view.updateOrInsertTileEntity(firstWorld, position, (char) 1, true);
         view.applyTileEntityVisibilityDecision(original, false, 1, view.tileEntityCheckModeToken(), worldEpoch.getAcquire());
         BlockViewTransition transition = view.drainTransitions().getFirst();
 
         worldEpoch.setRelease(4);
-        TrackedTileEntity<?> replacement = view.updateOrInsertTileEntity(secondWorld, position, 2, true);
+        TrackedTileEntity<?> replacement = view.updateOrInsertTileEntity(secondWorld, position, (char) 2, true);
 
         assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(transition, worldEpoch.getAcquire()));
         assertTrue(replacement.visible());

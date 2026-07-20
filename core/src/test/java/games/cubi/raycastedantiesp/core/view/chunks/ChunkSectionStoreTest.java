@@ -15,9 +15,11 @@ import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
+import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
@@ -27,7 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChunkSectionStoreTest {
@@ -316,6 +320,65 @@ class ChunkSectionStoreTest {
     }
 
     @Test
+    void transitionPublicationIncludesCommittedTileState() {
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
+            UUID world = UUID.randomUUID();
+            ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, 1, 64, 2);
+            view.applyTileEntityCheckMode(true, 0);
+            TestTileEntity tileEntity = view.updateOrInsertTileEntity(location, 99, true);
+            long modeToken = view.tileEntityCheckModeToken();
+            AtomicInteger acknowledgedTick = new AtomicInteger();
+            int transitions = 1_000;
+
+            Thread producer = Thread.startVirtualThread(() -> {
+                for (int tick = 1; tick <= transitions; tick++) {
+                    view.applyTileEntityVisibilityDecision(tileEntity, (tick & 1) == 0, tick, modeToken, 2);
+                    while (acknowledgedTick.getAcquire() != tick) {
+                        Thread.onSpinWait();
+                    }
+                }
+            });
+
+            for (int tick = 1; tick <= transitions; tick++) {
+                var drained = view.drainTransitions();
+                while (drained.isEmpty()) {
+                    Thread.onSpinWait();
+                    drained = view.drainTransitions();
+                }
+
+                assertEquals(1, drained.size());
+                boolean expectedVisible = (tick & 1) == 0;
+                assertEquals(expectedVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, drained.getFirst().type());
+                assertSame(tileEntity, drained.getFirst().tileEntity());
+                assertEquals(expectedVisible, tileEntity.visible());
+                assertEquals(tick, tileEntity.lastChecked());
+                acknowledgedTick.setRelease(tick);
+            }
+            producer.join();
+        });
+    }
+
+    @Test
+    void observingReplacementWorldDataNeverExposesOldWorldState() {
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            TestBlockView view = new TestBlockView(ODD_OCCLUDING, true);
+            UUID firstWorld = UUID.randomUUID();
+            UUID secondWorld = UUID.randomUUID();
+            view.upsertBlock(firstWorld, 1, 2, 3, 1);
+
+            Thread writer = Thread.startVirtualThread(() -> view.upsertBlock(secondWorld, 17, 2, 3, 1));
+            while (!view.isBlockOccluding(secondWorld, 17, 2, 3)) {
+                Thread.onSpinWait();
+            }
+
+            assertFalse(view.isBlockOccluding(secondWorld, 1, 2, 3));
+            assertFalse(view.isBlockOccluding(firstWorld, 1, 2, 3));
+            writer.join();
+        });
+    }
+
+    @Test
     void authoritativeSectionPruningRemovesAbsentAndOutOfRangeTilesWhilePreservingCollisions() {
         TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
         UUID world = UUID.randomUUID();
@@ -381,8 +444,12 @@ class ChunkSectionStoreTest {
         }
 
         @Override
-        protected TestTileEntity createTrackedTileEntity(BlockSpatial position, int blockID, boolean visible) {
+        protected TestTileEntity createTrackedTileEntity(BlockSpatial position, char blockID, boolean visible) {
             return new TestTileEntity(position, visible, blockID);
+        }
+
+        private TestTileEntity updateOrInsertTileEntity(UUID world, BlockSpatial position, int blockID, boolean visibleIfNew) {
+            return super.updateOrInsertTileEntity(world, position, (char) blockID, visibleIfNew);
         }
 
         private TestTileEntity updateOrInsertTileEntity(BlockLocatable location, int blockID, boolean visibleIfNew) {
@@ -416,7 +483,7 @@ class ChunkSectionStoreTest {
     }
 
     private static final class TestTileEntity extends NettyTileEntity<TestExtraData> {
-        private TestTileEntity(BlockSpatial position, boolean visible, int blockID) {
+        private TestTileEntity(BlockSpatial position, boolean visible, char blockID) {
             super(position, visible, TrackedTileEntity.NEVER_CHECKED, blockID);
         }
     }
