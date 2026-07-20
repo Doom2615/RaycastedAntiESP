@@ -206,8 +206,15 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public Collection<BlockLocatable> getKnownTileEntities() {
-        ArrayList<BlockLocatable> snapshot = new ArrayList<>();
+    public boolean isCurrentTileEntity(TrackedTileEntity<?> tileEntity) {
+        if (!(tileEntity instanceof NettyTileEntity<?> nettyTileEntity)) {
+            return false;
+        }
+        NettyTileEntity<R> head = knownTileEntitiesByColumnBucket.get(packColumnBucket(nettyTileEntity.chunkX(), nettyTileEntity.chunkZ()));
+        return findTileEntityInBucket(head, nettyTileEntity) == nettyTileEntity;
+    }
+
+    @Override
     public Collection<TrackedTileEntity<?>> getKnownTileEntities() {
         ArrayList<TrackedTileEntity<?>> snapshot = new ArrayList<>();
         forEachTileEntity(snapshot::add);

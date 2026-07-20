@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 /**
  * A per-player block view with one structural writer and concurrent weakly-consistent readers.
@@ -40,7 +41,7 @@ public interface BlockView extends Clearable {
     boolean isVisible(UUID world, BlockSpatial position, int currentTick);
 
     /** Applies a checked visibility decision and queues any required client transition. */
-    void applyTileEntityVisibilityDecision(TrackedTileEntity<?> tileEntity, boolean visible, int currentTick, long modeToken, ViewWorldContext expectedContext);
+    void applyTileEntityVisibilityDecision(TrackedTileEntity<?> tileEntity, boolean visible, int currentTick, long modeToken, int expectedWorldEpoch);
 
     /**
      * Records visibility established by the current outbound packet without queuing another packet. This also resets
@@ -58,7 +59,9 @@ public interface BlockView extends Clearable {
     /** Returns whether {@code modeToken} is still the current enabled generation. */
     boolean isCurrentEnabledTileEntityMode(long modeToken);
 
-    Collection<BlockLocatable> getKnownTileEntities();
+    boolean isCurrentTileEntity(TrackedTileEntity<?> tileEntity);
+
+    Collection<TrackedTileEntity<?>> getKnownTileEntities();
 
     /**
      * Iterates currently tracked tile entities that should be visibility-checked.
@@ -81,7 +84,7 @@ public interface BlockView extends Clearable {
      *
      * @return number of tile entities passed to {@code action}.
      */
-    int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, long modeToken, VisibilityResolver action);
+    int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, long modeToken, int expectedWorldEpoch, VisibilityResolver action);
 
     boolean hasPendingTransitions();
 
@@ -114,6 +117,6 @@ public interface BlockView extends Clearable {
     }
 
     interface Factory {
-        BlockView createBlockView();
+        BlockView createBlockView(IntSupplier worldEpochSupplier);
     }
 }
