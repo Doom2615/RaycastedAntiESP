@@ -13,7 +13,7 @@ abstract class AbstractPalettedBlockChunkData implements BlockChunkData {
     // When the palette is full, the chunk upgrades to the next implementation.
     protected final char[] palette;
     protected final long[] occlusionData;
-    protected volatile int paletteSize;
+    private int paletteSize; //netty reads only
 
     protected AbstractPalettedBlockChunkData(char blockID, int paletteCapacity, BlockInfoResolver blockInfoResolver) {
         if (paletteCapacity < 1 || paletteCapacity > 256) {
@@ -22,7 +22,7 @@ abstract class AbstractPalettedBlockChunkData implements BlockChunkData {
         this.palette = new char[paletteCapacity];
         this.occlusionData = new long[ChunkData.WORD_COUNT];
         setPaletteBlock(0, blockID);
-        this.paletteSize = 1;
+        paletteSize = 1;
         if (blockInfoResolver.isOccluding(blockID)) {
             Arrays.fill(this.occlusionData, -1L);
         }
