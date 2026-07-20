@@ -13,10 +13,12 @@ import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import games.cubi.raycastedantiesp.core.view.chunks.BlockChunkSectionStore;
 import games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore;
 import games.cubi.raycastedantiesp.core.view.chunks.OccludingChunkSectionStore;
 
+import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -43,7 +45,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     private volatile UUID trackedWorld;
     // Bit 0 is enabled; higher bits are a generation. The generation prevents enabled -> disabled -> enabled ABA from
     // accepting an old raycast and also tags transitions that may be drained after their originating mode was replaced.
-    private volatile long tileEntityCheckModeToken;
+    private volatile long tileEntityCheckModeToken; private static final VarHandle TILE_ENTITY_CHECK_MODE_TOKEN = VarHandler.get(AbstractBlockView.class, "tileEntityCheckModeToken", long.class);
 
     protected AbstractBlockView(BlockInfoResolver blockInfoResolver, boolean trackAllBlocks, IntSupplier worldEpochSupplier) {
         Logger.requireNonNull(blockInfoResolver, "blockInfoResolver was null", 1, AbstractBlockView.class);
@@ -143,7 +145,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     private void commitTileEntityVisibilityDecision(T tileEntity, boolean currentVisibility, boolean shouldBeVisible, int currentTick, long modeToken, int expectedWorldEpoch) {
-        if (!isCurrentWorldEpoch(expectedWorldEpoch) || tileEntityCheckModeToken != modeToken) {
+        if (!isCurrentWorldEpoch(expectedWorldEpoch) || tileEntityCheckModeTokenAcquire() != modeToken) {
             return;
         }
         if (!modeEnabled(modeToken)) {
@@ -172,7 +174,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     @Override
     public void applyTileEntityCheckMode(boolean enabled, int currentTick) {
-        long current = tileEntityCheckModeToken;
+        long current = tileEntityCheckModeTokenAcquire();
         if (modeEnabled(current) == enabled) {
             return;
         }
@@ -180,11 +182,11 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         long next = ((current >>> 1) + 1L) << 1;
         if (enabled) {
             forEachTileEntity(tileEntity -> tileEntity.setLastChecked(TrackedTileEntity.NEVER_CHECKED));
-            tileEntityCheckModeToken = next | 1L;
+            TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next | 1L);
             return;
         }
 
-        tileEntityCheckModeToken = next;
+        TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next);
         int worldEpoch = worldEpochSupplier.getAsInt();
         forEachTileEntity(tileEntity -> {
             boolean visible = tileEntity.visible();
@@ -197,12 +199,12 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     @Override
     public long tileEntityCheckModeToken() {
-        return tileEntityCheckModeToken;
+        return tileEntityCheckModeTokenAcquire();
     }
 
     @Override
     public boolean isCurrentEnabledTileEntityMode(long modeToken) {
-        return modeEnabled(modeToken) && tileEntityCheckModeToken == modeToken;
+        return modeEnabled(modeToken) && tileEntityCheckModeTokenAcquire() == modeToken;
     }
 
     @Override
@@ -440,6 +442,10 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     private boolean isCurrentWorldEpoch(int expectedWorldEpoch) {
         return PlayerData.isStableWorldEpoch(expectedWorldEpoch) && worldEpochSupplier.getAsInt() == expectedWorldEpoch;
+    }
+
+    private long tileEntityCheckModeTokenAcquire() {
+        return (long) TILE_ENTITY_CHECK_MODE_TOKEN.getAcquire(this);
     }
 
     private void forEachTileEntity(Consumer<NettyTileEntity<R>> action) {
