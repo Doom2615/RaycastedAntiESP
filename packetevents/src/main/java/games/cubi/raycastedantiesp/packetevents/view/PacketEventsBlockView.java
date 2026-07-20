@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.packetevents.view;
 
 import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
-import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
+import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsTileEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;

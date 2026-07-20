@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.packetevents.locatables;
 
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
 

@@ -24,7 +24,7 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
@@ -42,8 +42,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.IntSupplier;
 
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_LEASHER;
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_VEHICLE;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
     private final IntSupplier CURRENT_TICK_SUPPLIER;

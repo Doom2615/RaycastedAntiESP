@@ -13,7 +13,7 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.RaycastConfig;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.NettyData;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
@@ -24,8 +24,8 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.util.UUID;
 
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_LEASHER;
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_VEHICLE;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 /**
  * @param <P> The platform's packet wrapper (PacketWrapper<?>)

@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;

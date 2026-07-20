@@ -2,8 +2,8 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import games.cubi.locatables.implementations.ImmutableBlockSpatialImpl;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
-import games.cubi.raycastedantiesp.core.locatables.NettyTileEntity;
-import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
+import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import org.junit.jupiter.api.Test;

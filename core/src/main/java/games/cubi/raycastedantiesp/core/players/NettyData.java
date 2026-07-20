@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.*;
 import games.cubi.raycastedantiesp.core.utils.Packet.Packets;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntity.NO_VEHICLE;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 /**
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.

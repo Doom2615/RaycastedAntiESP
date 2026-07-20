@@ -2,7 +2,7 @@ package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.locatables.api.BlockLocatable;
 import games.cubi.locatables.api.BlockSpatial;
-import games.cubi.raycastedantiesp.core.locatables.TrackedTileEntity;
+import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;

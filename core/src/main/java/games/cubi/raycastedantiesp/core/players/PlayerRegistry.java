@@ -1,6 +1,6 @@
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 
 import java.util.Collection;
 import java.util.UUID;

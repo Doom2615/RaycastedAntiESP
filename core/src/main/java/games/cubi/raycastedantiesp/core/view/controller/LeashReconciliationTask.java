@@ -1,7 +1,7 @@
 package games.cubi.raycastedantiesp.core.view.controller;
 
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
 

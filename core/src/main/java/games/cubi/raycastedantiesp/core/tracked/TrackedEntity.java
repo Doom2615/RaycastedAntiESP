@@ -1,4 +1,4 @@
-package games.cubi.raycastedantiesp.core.locatables;
+package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.MutableFloatingSpatial;
