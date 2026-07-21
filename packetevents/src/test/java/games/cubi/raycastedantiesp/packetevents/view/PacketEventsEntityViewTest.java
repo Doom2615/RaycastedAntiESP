@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +21,41 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PacketEventsEntityViewTest {
+    @Test
+    void sizeTracksMembershipButNotVisibility() {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
+        UUID world = UUID.randomUUID();
+        PacketEventsEntity visible = entity(1, UUID.randomUUID());
+        PacketEventsEntity hidden = entity(2, UUID.randomUUID());
+        hidden.setVisible(false);
+
+        assertEquals(0, view.size());
+        view.insertEntity(world, visible);
+        view.insertEntity(world, hidden);
+        assertEquals(2, view.size());
+
+        view.setVisibility(visible, false, 1, worldEpoch.getAcquire());
+        view.setVisibility(hidden, true, 1, worldEpoch.getAcquire());
+        assertEquals(2, view.size());
+
+        view.removeEntity(visible.entityID());
+        assertEquals(1, view.size());
+        view.removeEntity(hidden.entityID());
+        assertEquals(0, view.size());
+    }
+
+    @Test
+    void sizeCanBeReadFromAnotherThread() throws Exception {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
+        view.insertEntity(UUID.randomUUID(), entity(1, UUID.randomUUID()));
+
+        int size = CompletableFuture.supplyAsync(view::size).get(5, TimeUnit.SECONDS);
+
+        assertEquals(1, size);
+    }
+
     @Test
     void staleWorldEpochCannotMutateReplacement() {
         AtomicInteger worldEpoch = new AtomicInteger(2);
