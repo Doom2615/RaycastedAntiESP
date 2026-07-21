@@ -115,6 +115,11 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
+    public int size() {
+        return entitiesByUUID.size();
+    }
+
+    @Override
     public boolean isVisible(int entityID) {
         PacketEventsEntity entity = Logger.requireNonNull(getTrackedEntity(entityID), "Entity with ID " + entityID + " does not exist in EntityView", 3, PacketEventsEntityView.class);
         return entity.visible();
