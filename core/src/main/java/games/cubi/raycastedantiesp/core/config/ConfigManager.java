@@ -2,8 +2,10 @@ package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.engine.EngineConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.ChunkSectionConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.SoundEffectsConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
 import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import org.spongepowered.configurate.ConfigurationNode;
@@ -166,6 +168,14 @@ public class ConfigManager {
 
     public TileEntityConfig getTileEntityConfig() {
         return activeConfig().checksConfig().tileEntityConfig();
+    }
+
+    public SoundEffectsConfig getSoundEffectsConfig() {
+        return activeConfig().checksConfig().soundEffectsConfig();
+    }
+
+    public ChunkSectionConfig getChunkSectionConfig() {
+        return activeConfig().checksConfig().chunkSectionConfig();
     }
 
     public DebugConfig getDebugConfig() {

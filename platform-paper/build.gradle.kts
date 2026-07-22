@@ -34,6 +34,7 @@ dependencies {
     annotationProcessor("net.strokkur.commands:processor-paper:2.1.2")
 
     implementation("org.jetbrains:annotations:24.0.1")
+    implementation("org.bstats:bstats-bukkit:3.2.1")
 
     implementation(project(":leafpile"))
     implementation(project(":locatables"))
@@ -142,10 +143,16 @@ tasks.shadowJar {
         include(project(":packetevents"))
 
         include(project(":leafpile"))
+        include(dependency("org.bstats:bstats-base:3.2.1"))
+        include(dependency("org.bstats:bstats-bukkit:3.2.1"))
     }
     relocate(
         "ca.spottedleaf",
         "games.cubi.libs.raycastedantiesp.spottedleaf"
+    )
+    relocate(
+        "org.bstats",
+        "games.cubi.libs.raycastedantiesp.bstats"
     )
     minimize {} // get rid of leafpile bloat
     archiveBaseName.set("RaycastedAntiESP")
