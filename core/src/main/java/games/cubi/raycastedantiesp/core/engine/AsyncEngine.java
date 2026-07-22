@@ -376,7 +376,7 @@ public abstract class AsyncEngine implements Engine {
             ImmutableSpatial entityLocation = entity.getOffsetPosition();
             if (entityLocation == null) {
                 timings.incrementEntityNullTargets();
-                Logger.debug("SimpleEngine.checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
+                Logger.debug("checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
                         + " target=" + entity.entityUUID()
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
@@ -400,7 +400,7 @@ public abstract class AsyncEngine implements Engine {
             ImmutableSpatial otherPlayerLocation = otherPlayer.getOffsetPosition();
             if (otherPlayerLocation == null) {
                 timings.incrementPlayerNullTargets();
-                Logger.debug("SimpleEngine.checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
+                Logger.debug("checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
                         + " target=" + otherPlayer.entityUUID()
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
