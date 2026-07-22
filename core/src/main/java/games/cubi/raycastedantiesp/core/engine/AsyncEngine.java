@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 
-public abstract class SimpleEngine implements Engine {
+public abstract class AsyncEngine implements Engine {
     private static final long SLOW_TICK_NANOS = 40 * 1_000_000L;
     //Literally just magic numbers I made by keyboard mashing
     private static final int TICK_IDLE = 1872;
@@ -41,7 +41,7 @@ public abstract class SimpleEngine implements Engine {
     private final AsyncRunner asyncRunner;
     private final TimingStatsSelector timingStatsSelector = new TimingStatsSelector();
 
-    public SimpleEngine(ConfigManager config, ParticleSpawner particleSpawner, IntSupplier currentTickSupplier, AsyncRunner asyncRunner) {
+    public AsyncEngine(ConfigManager config, ParticleSpawner particleSpawner, IntSupplier currentTickSupplier, AsyncRunner asyncRunner) {
         this.config = config;
         this.particleSpawner = particleSpawner;
         this.currentTickSupplier = currentTickSupplier;
@@ -68,7 +68,7 @@ public abstract class SimpleEngine implements Engine {
      */
     public void cancelPendingTickReservation() {
         if (!tickState.compareAndSet(TICK_PENDING, TICK_IDLE)) {
-            Logger.warning("Attempted to cancel a pending tick reservation, but the tick was no longer pending.", 5, SimpleEngine.class);
+            Logger.warning("Attempted to cancel a pending tick reservation, but the tick was no longer pending.", 5, AsyncEngine.class);
         }
     }
 
@@ -102,7 +102,7 @@ public abstract class SimpleEngine implements Engine {
 
                 if (tickState.get() == TICK_RUNNING) {
                     // This means that there is already a tick running, so we should exit
-                    Logger.info("Tick finished behind but another thread had already begun ticking the next tick.", 5, SimpleEngine.class);
+                    Logger.info("Tick finished behind but another thread had already begun ticking the next tick.", 5, AsyncEngine.class);
                     return;
                 }
                 expectPending = false; //Next call to startTickState should not expect to see status set to pending
@@ -134,7 +134,7 @@ public abstract class SimpleEngine implements Engine {
             Logger.info("RaycastedAntiESP is already processing this tick; skipping duplicate same-tick attempt."
                     + " scheduledTick=" + scheduledTick
                     + " currentServerTick=" + startTick
-                    + " currentRunningTick=" + tickAlreadyRunning, 6, SimpleEngine.class);
+                    + " currentRunningTick=" + tickAlreadyRunning, 6, AsyncEngine.class);
             finishTickState();
             return false;
         }
@@ -148,7 +148,7 @@ public abstract class SimpleEngine implements Engine {
                     + " currentServerTick=" + currentTickSupplier.getAsInt()
                     + " currentRunningTick=" + tickAlreadyRunning
                     + " runningThreads=" + runningThreads
-                    + " timeSpentInQueue=" + TickTimingFormatter.formatMillis(queueNanos) + "ms", 5, SimpleEngine.class);
+                    + " timeSpentInQueue=" + TickTimingFormatter.formatMillis(queueNanos) + "ms", 5, AsyncEngine.class);
             logAggregateReport(tickTimingStats.recordSkipped(threads, startNanos));
             finishTickState();
             return false;
@@ -224,7 +224,7 @@ public abstract class SimpleEngine implements Engine {
                 } else {
                     finishTickState();
                 }
-                Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
+                Logger.error("An error occurred during tick scheduling before handing off to sub-tick processing. Resetting tickThreadsRunning to 0 to avoid deadlock. Current tick: " + currentTickSupplier.getAsInt(), 2, AsyncEngine.class);
             }
         }
     }
@@ -247,7 +247,7 @@ public abstract class SimpleEngine implements Engine {
             }
             int threadsRemaining = tickThreadsRunning.decrementAndGet();
             if (threadsRemaining < 0) {
-                Logger.error("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
+                Logger.error("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, AsyncEngine.class);
                 tickThreadsRunning.set(0);
                 finaliseTick(currentTick);
             }
@@ -258,13 +258,13 @@ public abstract class SimpleEngine implements Engine {
                         TickTimingSnapshot snapshot = timings.snapshot(currentTickSupplier.getAsInt(), completionNanos);
                         String aggregateReport = timingStats.recordCompleted(snapshot, completionNanos);
                         if (snapshot.wallNanos() > SLOW_TICK_NANOS) {
-                            Logger.warning(snapshot.toSlowTickMessage(), 5, SimpleEngine.class);
+                            Logger.warning(snapshot.toSlowTickMessage(), 5, AsyncEngine.class);
                         }
                         logAggregateReport(aggregateReport);
                     } else {
                         long elapsedNanos = completionNanos - tickNanos.get();
                         if (elapsedNanos > SLOW_TICK_NANOS) {
-                            Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
+                            Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, AsyncEngine.class);
                         }
                     }
                 } finally {
@@ -288,7 +288,7 @@ public abstract class SimpleEngine implements Engine {
             }
             if (tickState.compareAndSet(TICK_IDLE, TICK_RUNNING)) {
                 // This means that this tick was dispatched but not marked as such, or was unmarked at some point.
-                Logger.warning("Tick " + scheduledTick + " was dispatched but not marked as pending. This suggests a race condition. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
+                Logger.warning("Tick " + scheduledTick + " was dispatched but not marked as pending. This suggests a race condition. Please report this on our GitHub or Discord.", 5, AsyncEngine.class);
                 return true;
             }
         } else if (tickState.compareAndSet(TICK_IDLE, TICK_RUNNING)) {
@@ -297,7 +297,7 @@ public abstract class SimpleEngine implements Engine {
 
         // This means there is already a tick pending or running, so we should exit.
         recordSkippedTick(-1, System.nanoTime());
-        Logger.info("Tick " + scheduledTick + " is pending but another tick is already pending or running. Exiting now.", 6, SimpleEngine.class);
+        Logger.info("Tick " + scheduledTick + " is pending but another tick is already pending or running. Exiting now.", 6, AsyncEngine.class);
         return false;
     }
 
@@ -316,7 +316,7 @@ public abstract class SimpleEngine implements Engine {
     private void finishTickState() {
         if (!tickState.compareAndSet(TICK_RUNNING, TICK_IDLE)) {
             // This should never happen as it means the tick was marked as completed before processing was completed
-            Logger.warning("tickState was not running when completing tick! This should never happen. Please report this on our GitHub or Discord.", 5, SimpleEngine.class);
+            Logger.warning("tickState was not running when completing tick! This should never happen. Please report this on our GitHub or Discord.", 5, AsyncEngine.class);
         }
     }
 
@@ -441,7 +441,7 @@ public abstract class SimpleEngine implements Engine {
 
     private static void logAggregateReport(String aggregateReport) {
         if (aggregateReport != null) {
-            Logger.info(aggregateReport, 4, SimpleEngine.class);
+            Logger.info(aggregateReport, 4, AsyncEngine.class);
         }
     }
 

@@ -4,7 +4,7 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import com.destroystokyo.paper.event.server.ServerTickStartEvent;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
-import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
+import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
@@ -15,7 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -26,18 +25,18 @@ import static games.cubi.raycastedantiesp.paper.UpdateChecker.checkForUpdates;
 
 public class EventListener extends PaperListener {
     private final RaycastedAntiESP plugin;
-    private final PaperSimpleEngine engine;
+    private final PaperAsyncEngine engine;
     private final IntSupplier currentTickSupplier;
 
     private static EventListener instance = null;
 
-    private EventListener(RaycastedAntiESP plugin, PaperSimpleEngine engine, IntSupplier currentTickSupplier) {
+    private EventListener(RaycastedAntiESP plugin, PaperAsyncEngine engine, IntSupplier currentTickSupplier) {
         this.plugin = plugin;
         this.engine = engine;
         this.currentTickSupplier = currentTickSupplier;
     }
 
-    public static EventListener initialise(RaycastedAntiESP plugin, PaperSimpleEngine engine, IntSupplier currentTickSupplier) {
+    public static EventListener initialise(RaycastedAntiESP plugin, PaperAsyncEngine engine, IntSupplier currentTickSupplier) {
         if (instance == null) {
             instance = new EventListener(plugin, engine, currentTickSupplier);
         }
