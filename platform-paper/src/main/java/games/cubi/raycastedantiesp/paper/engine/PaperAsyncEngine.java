@@ -2,16 +2,16 @@ package games.cubi.raycastedantiesp.paper.engine;
 
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.engine.AsyncRunner;
-import games.cubi.raycastedantiesp.core.engine.SimpleEngine;
+import games.cubi.raycastedantiesp.core.engine.AsyncEngine;
 import games.cubi.raycastedantiesp.paper.PaperParticleSpawner;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import io.papermc.paper.threadedregions.scheduler.AsyncScheduler;
 
 import java.util.function.IntSupplier;
 
-public class PaperSimpleEngine extends SimpleEngine {
+public class PaperAsyncEngine extends AsyncEngine {
 
-    public PaperSimpleEngine(RaycastedAntiESP plugin, ConfigManager cfg, IntSupplier currentTickSupplier) {
+    public PaperAsyncEngine(RaycastedAntiESP plugin, ConfigManager cfg, IntSupplier currentTickSupplier) {
         super(cfg, new PaperParticleSpawner(), currentTickSupplier, new PaperAsyncRunner(plugin.getServer().getAsyncScheduler()));
     }
 

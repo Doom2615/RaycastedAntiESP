@@ -12,7 +12,7 @@ import games.cubi.raycastedantiesp.core.Core;
 import games.cubi.raycastedantiesp.paper.commands.Attribution;
 import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
-import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
+import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsEntityView;
@@ -46,7 +46,7 @@ import java.util.List;
 public final class RaycastedAntiESP extends JavaPlugin implements CommandExecutor {
     private static ConfigManager config;
     private static PaperPacketEventsEntityViewController packetEventsController;
-    private static PaperSimpleEngine engine;
+    private static PaperAsyncEngine engine;
     private static MetricsCollector metricsCollector;
     private static RaycastedAntiESP instance;
     private static PaperLoggerAdapter loggerAdapter;
@@ -98,7 +98,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
         new PaperPacketEventsBlockViewController(blockInfoResolver, trackAllBlocks, currentTickSupplier);
 
-        engine = new PaperSimpleEngine(this, config, currentTickSupplier);
+        engine = new PaperAsyncEngine(this, config, currentTickSupplier);
         UpdateChecker.checkForUpdates(this, Bukkit.getConsoleSender());
         EventListener.initialise(this, engine, currentTickSupplier);
 
@@ -145,7 +145,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
     public static PaperPacketEventsEntityViewController getPacketEventsController() {
         return packetEventsController;
     }
-    public static PaperSimpleEngine getEngine() {
+    public static PaperAsyncEngine getEngine() {
         return engine;
     }
     public static RaycastedAntiESP get() {
