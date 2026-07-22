@@ -4,7 +4,8 @@ import games.cubi.raycastedantiesp.core.config.ConfigEnum;
 import org.jetbrains.annotations.Nullable;
 
 public enum EngineMode implements ConfigEnum {
-    SIMPLE("simple"),
+    SIMPLE("simple"), //simple is an alias for async
+    ASYNC("async"),
     NETTY("netty");
 
     private final String configName;
@@ -28,6 +29,6 @@ public enum EngineMode implements ConfigEnum {
 
     @Override
     public String[] getValues() {
-        return new String[] {"simple", "netty"};
+        return new String[] {SIMPLE.configName, NETTY.configName, ASYNC.configName};
     }
 }

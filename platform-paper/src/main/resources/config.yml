@@ -36,9 +36,9 @@ checks:
         always-show-radius-chunks: 2
         visible-recheck-interval-ticks: -1
 engine:
-    mode: simple
-    simple:
-        async-processing-threads: 1
+    mode: async
+    async:
+        processing-threads: 1 # 1 thread is sufficient for hundreds of players, I do not recommend increasing this value blindly.
     netty:
 block-processor:
     mode: packetevents
