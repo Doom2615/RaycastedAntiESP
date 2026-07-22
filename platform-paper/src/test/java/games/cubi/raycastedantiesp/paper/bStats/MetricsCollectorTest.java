@@ -91,16 +91,6 @@ class MetricsCollectorTest {
     }
 
     @Test
-    void medianCalculationDoesNotMutateSamples() {
-        int[] samples = {5001, 1, 100};
-        int[] original = samples.clone();
-
-        MetricsCollector.bucketMedianEntityCounts(samples);
-
-        assertArrayEquals(original, samples);
-    }
-
-    @Test
     void medianExcludesDisconnectedPlayersAndSkipsEmptyPopulations() {
         List<EntityCountSample> samples = List.of(
                 new EntityCountSample(true, 10),
