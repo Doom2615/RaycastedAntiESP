@@ -88,7 +88,7 @@ public class MetricsCollector {
 
         // Runtime metrics
         metrics.addCustomChart(new SimplePie("server_size", this::getPlayerCount));
-        metrics.addCustomChart(new SimplePie("entities", this::getMedianEntityCount));
+        metrics.addCustomChart(new SimplePie("v2_median_tracked_entities_per_player", this::getMedianEntityCount));
     }
 
     private void addNumericChart(String chartID, IntMetric metric) {
