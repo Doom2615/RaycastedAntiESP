@@ -32,6 +32,12 @@ public interface EntityView<T extends TrackedEntity<?, ?>>  extends Clearable {
 
     boolean exists(int entityID);
 
+    /**
+     * Returns a weakly consistent count of the entities currently tracked by this view.
+     * This operation is safe to call from threads other than the structural writer.
+     */
+    int size();
+
     @Deprecated
     boolean isVisible(UUID entityUUID, int currentTick);
 
