@@ -118,7 +118,7 @@ public abstract class AsyncEngine implements Engine {
      * lifecycle; false if this attempt was skipped or cleaned up during setup.
      */
     private boolean dispatchTick(int scheduledTick, int startTick, long scheduledNanos) {
-        int threads = config.getEngineConfig().simpleConfig().asyncProcessingThreads();
+        int threads = config.getEngineConfig().asyncConfig().asyncProcessingThreads();
         if (threads < 1) threads = 1;
 
         DebugConfig debugConfig = config.getDebugConfig();

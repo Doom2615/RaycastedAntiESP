@@ -5,7 +5,7 @@ import games.cubi.raycastedantiesp.core.config.ConfigLoadException;
 import games.cubi.raycastedantiesp.core.config.ConfigReader;
 import org.spongepowered.configurate.ConfigurationNode;
 
-public record EngineConfig(EngineMode mode, AsyncEngineConfig simpleConfig) implements Config {
+public record EngineConfig(EngineMode mode, AsyncEngineConfig asyncConfig) implements Config {
     public static EngineConfig load(ConfigurationNode root) {
         ConfigurationNode node = ConfigReader.node(root, "engine");
         String modeName = ConfigReader.string(ConfigReader.node(node, "mode"), "engine.mode");
