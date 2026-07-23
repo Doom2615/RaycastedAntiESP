@@ -236,13 +236,13 @@ public class RaycastedAntiESPCommand {
             }
         }
 
-        @Executes("entity-uuid")
-        void getFromEntityUUID(Entity entity, CommandSender sender) {
-            UUID entityUUID = entity.getUniqueId();
-            sender.sendRichMessage("<white>Bukkit entity data:");
-            sendBukkitEntityData(sender, entity);
-            sender.sendRichMessage("<white>Searching all connected player views for entity UUID " + entityUUID + ":");
-
+        @Executes("entity-uuid-raw")
+        void getFromRawUUID(String entityUUIDraw, CommandSender sender) {
+            sender.sendRichMessage("<white>Searching all connected player views for entity UUID " + entityUUIDraw + ":");
+            UUID entityUUID = UUID.fromString(entityUUIDraw);
+            getFromUUID(entityUUID, sender);
+        }
+        void getFromUUID(UUID entityUUID, CommandSender sender) {
             int matches = 0;
             for (PlayerData playerData : PlayerRegistry.getInstance().getAllPlayerData()) {
                 if (!playerData.isConnected()) {
@@ -253,6 +253,14 @@ public class RaycastedAntiESPCommand {
             if (matches == 0) {
                 sender.sendRichMessage("<red>No tracked entity with UUID " + entityUUID + " was found.");
             }
+        }
+
+        @Executes("entity-uuid")
+        void getFromEntityUUID(Entity entity, CommandSender sender) {
+            UUID entityUUID = entity.getUniqueId();
+            sender.sendRichMessage("<white>Bukkit entity data:");
+            sendBukkitEntityData(sender, entity);
+            getFromUUID(entityUUID, sender);
         }
 
         private int reportEntityIDMatches(CommandSender sender, PlayerData playerData, int entityID) {
