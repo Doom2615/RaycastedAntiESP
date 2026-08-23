@@ -55,21 +55,23 @@ public interface BlockView extends Clearable {
 
     TrackedTileEntity<?> getTrackedTileEntity(UUID world, BlockSpatial position);
 
+    /** Returns the engine's desired visibility, not the state currently applied to the client. */
     boolean isVisible(UUID world, BlockSpatial position, int currentTick);
 
     /**
-     * Records visibility established by the current outbound packet without queuing another packet. This also resets
-     * the check timestamp because the transmitted state supersedes the result of any previous visibility check. The
-     * tile entity must be the current state returned by this view's structural-writer operations.
+     * Records visibility established by the current outbound packet without queuing another packet. This synchronizes
+     * both desired and client visibility and resets the check timestamp because the transmitted state supersedes the
+     * result of any previous visibility check. The tile entity must be the current state returned by this view's
+     * structural-writer operations.
      */
     void recordOutboundTileEntityVisibility(TrackedTileEntity<?> tileEntity, boolean visible);
 
     /**
      * Applies a mode change from the structural writer.
      *
-     * Invokes {@code visibilityRepairConsumer} for each tile entity made visible when checks are disabled. The
-     * structural writer must send their current state directly rather than publishing them to the engine transition
-     * queue.
+     * Sets every desired state visible when checks are disabled and invokes {@code visibilityRepairConsumer} for each
+     * tile entity still hidden from the client. The structural writer must send their current state directly rather
+     * than publishing them to the engine transition queue.
      */
     void applyTileEntityCheckMode(boolean enabled, int currentTick, Consumer<TrackedTileEntity<?>> visibilityRepairConsumer);
 

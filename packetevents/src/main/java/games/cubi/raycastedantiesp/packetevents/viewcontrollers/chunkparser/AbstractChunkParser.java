@@ -105,9 +105,13 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
                         TrackedTileEntity<?> state = blockView.updateOrInsertTileEntity(world, key, blockID, !mutatePackets);
                         if (!mutatePackets) {
                             blockView.recordOutboundTileEntityVisibility(state, true);
-                        } else if (state != null && !state.visible()) {
-                            section.set(localX, localY, localZ, hiddenBlockID.applyAsInt(blockY));
-                            mutatedBlock = true;
+                        } else if (state != null) {
+                            boolean visible = state.visible();
+                            if (!visible) {
+                                section.set(localX, localY, localZ, hiddenBlockID.applyAsInt(blockY));
+                                mutatedBlock = true;
+                            }
+                            state.setClientVisible(visible);
                         }
                     }
                 }
@@ -184,7 +188,7 @@ abstract class AbstractChunkParser<D> implements ChunkParser {
                 TrackedTileEntity<PacketEventsTileEntityReplayData> state = tracked(blockView, world, key);
                 if (state != null) {
                     replayData(state).setBlockEntityData(BlockEntityTypes.getById(clientVersion, tileEntity.getType()), tileEntity.getNBT());
-                    return !state.visible();
+                    return !state.clientVisible();
                 }
                 Logger.warning("Managed chunk block entity was missing from tracked state at " + blockX + "," + blockY + "," + blockZ, 3, AbstractChunkParser.class);
                 return true;

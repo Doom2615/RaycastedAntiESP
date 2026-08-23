@@ -91,14 +91,14 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         blockView.applyTileEntityCheckMode(tileChecksEnabled, currentTick,
                 tileEntity -> sendTileEntityVisibilityRepair(event.getUser(), tileEntity));
 
-        handleBlockPackets(event, event.getUser(), playerData, world, currentTick, tileChecksEnabled);
+        handleBlockPackets(event, event.getUser(), playerData, world, tileChecksEnabled);
 
         if (blockView.hasPendingTransitions()) {
             processTileEntityTransitions(event.getUser(), playerData);
         }
     }
 
-    private void handleBlockPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick, boolean tileChecksEnabled) {
+    private void handleBlockPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, boolean tileChecksEnabled) {
         if (world == null) {
             return;
         }
@@ -124,9 +124,14 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                 return;
             }
             ensureTileReplayData(tileEntity).setBlockEntityData(packet.getBlockEntityType(), packet.getNBT());
-            if (tileChecksEnabled && !blockView.isVisible(world, position, currentTick)) {
+            boolean visible = tileEntity.visible();
+            boolean clientVisible = tileEntity.clientVisible();
+            if (!visible || !clientVisible) {
                 event.setCancelled(true);
-                sendHiddenBlock(viewer, position);
+                if (!visible && clientVisible) {
+                    sendHiddenBlock(viewer, position);
+                    tileEntity.setClientVisible(false);
+                }
             }
         } else if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
             WrapperPlayServerChunkData packet = new WrapperPlayServerChunkData(event);
@@ -159,9 +164,13 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                 TrackedTileEntity<?> state = blockView.updateOrInsertTileEntity(world, key, blockID, visibleIfNew);
                 if (!tileChecksEnabled) {
                     blockView.recordOutboundTileEntityVisibility(state, true);
-                } else if (state != null && !state.visible()) {
-                    change.setBlockId(getHiddenBlockId(key.blockY()));
-                    event.markForReEncode(true);
+                } else if (state != null) {
+                    boolean visible = state.visible();
+                    if (!visible) {
+                        change.setBlockId(getHiddenBlockId(key.blockY()));
+                        event.markForReEncode(true);
+                    }
+                    state.setClientVisible(visible);
                 }
             } else {
                 blockView.removeTileEntity(world, key);
@@ -216,6 +225,9 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         if (state == null || state.blockID() == 0) {
             return;
         }
+        if (!transitionMatchesCurrentVisibility(type, state.visible())) {
+            return;
+        }
         switch (type) {
             case HIDE -> {
                 if (!blockView.isCurrentEnabledTileEntityMode(modeToken)) {
@@ -223,13 +235,14 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                     state.setLastChecked(TrackedTileEntity.NEVER_CHECKED);
                     return;
                 }
-                viewer.writePacketSilently(getBlockChangeWith(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ(), getHiddenBlockId(tileEntity.blockY())));
+                if (state.clientVisible()) {
+                    viewer.writePacketSilently(getBlockChangeWith(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ(), getHiddenBlockId(tileEntity.blockY())));
+                    state.setClientVisible(false);
+                }
             }
             case SHOW -> {
-                if (!state.visible()) {
-                    return;
-                }
                 sendTileEntity(viewer, state);
+                state.setClientVisible(true);
             }
         }
     }
@@ -239,6 +252,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         TrackedTileEntity<PacketEventsTileEntityReplayData> state = (TrackedTileEntity<PacketEventsTileEntityReplayData>) tileEntity;
         if (state.blockID() != 0) {
             sendTileEntity(viewer, state);
+            state.setClientVisible(true);
         }
     }
 
@@ -263,9 +277,13 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             TrackedTileEntity<?> state = playerData.blockView().updateOrInsertTileEntity(world, location, blockID, visibleIfNew);
             if (!tileChecksEnabled) {
                 playerData.blockView().recordOutboundTileEntityVisibility(state, true);
-            } else if (state != null && !state.visible()) {
-                event.setCancelled(true);
-                sendHiddenBlock(viewer, location);
+            } else if (state != null) {
+                boolean visible = state.visible();
+                if (!visible) {
+                    event.setCancelled(true);
+                    sendHiddenBlock(viewer, location);
+                }
+                state.setClientVisible(visible);
             }
         } else {
             playerData.blockView().removeTileEntity(world, location);
@@ -295,6 +313,13 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                 replayData.blockEntityType(),
                 replayData.nbt()
         );
+    }
+
+    static boolean transitionMatchesCurrentVisibility(BlockViewTransition.Type type, boolean visible) {
+        return switch (type) {
+            case SHOW -> visible;
+            case HIDE -> !visible;
+        };
     }
 
     @SuppressWarnings("unchecked")

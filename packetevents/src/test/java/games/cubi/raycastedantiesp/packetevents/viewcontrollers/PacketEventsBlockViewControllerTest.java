@@ -13,6 +13,7 @@ import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.view.BlockView;
+import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,7 @@ class PacketEventsBlockViewControllerTest {
 
         assertSame(original, transitionEntity.get());
         assertTrue(((NettyTileEntity<?>) original).isRemoved());
+        assertTrue(original.clientVisible());
         original.setLastChecked(42);
         assertTrue(((NettyTileEntity<?>) original).isRemoved());
         assertNull(PacketEventsBlockViewController.resolveCurrentTransitionState(transitionEntity.get(), 2, 2));
@@ -75,6 +77,18 @@ class PacketEventsBlockViewControllerTest {
         view.drainTransitions((type, queuedTileEntity, modeToken, worldEpoch) -> transitionEntity.set(queuedTileEntity));
 
         assertSame(transitionEntity.get(), PacketEventsBlockViewController.resolveCurrentTransitionState(transitionEntity.get(), 2, 2));
+    }
+
+    @Test
+    void staleVisibilityTransitionsAreIgnored() {
+        assertFalse(PacketEventsBlockViewController.transitionMatchesCurrentVisibility(
+                BlockViewTransition.Type.SHOW, false));
+        assertFalse(PacketEventsBlockViewController.transitionMatchesCurrentVisibility(
+                BlockViewTransition.Type.HIDE, true));
+        assertTrue(PacketEventsBlockViewController.transitionMatchesCurrentVisibility(
+                BlockViewTransition.Type.SHOW, true));
+        assertTrue(PacketEventsBlockViewController.transitionMatchesCurrentVisibility(
+                BlockViewTransition.Type.HIDE, false));
     }
 
     @Test
