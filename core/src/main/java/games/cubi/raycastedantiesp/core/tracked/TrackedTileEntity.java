@@ -17,6 +17,10 @@ public interface TrackedTileEntity<T> extends ImmutableBlockSpatial, Clearable {
     boolean visible();
     TrackedTileEntity<T> setVisible(boolean visible);
 
+    /** Packet-thread-only client state. */
+    boolean clientVisible();
+    TrackedTileEntity<T> setClientVisible(boolean clientVisible);
+
     int lastChecked();
     TrackedTileEntity<T> setLastChecked(int lastChecked);
 
