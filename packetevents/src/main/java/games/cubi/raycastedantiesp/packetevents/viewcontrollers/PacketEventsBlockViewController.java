@@ -47,7 +47,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     private final IntSupplier currentTickSupplier;
     private final PacketEventsCommonViewController common;
     private TileEntityConfig tileEntityConfig = null;
-    private int hideOnSpawnDistanceSquared = 0;
 
     protected PacketEventsBlockViewController(BlockInfoResolver blockInfoResolver, boolean trackAllBlocks, IntSupplier currentTickSupplier) {
         this.blockInfoResolver = blockInfoResolver;
@@ -76,7 +75,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
 
         if (!(ConfigManager.get().getTileEntityConfig() == tileEntityConfig)) {
             tileEntityConfig = ConfigManager.get().getTileEntityConfig();
-            hideOnSpawnDistanceSquared = tileEntityConfig.hideOnSpawnDistance() * tileEntityConfig.hideOnSpawnDistance();
         }
 
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
@@ -304,7 +302,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         if (playerLocation == null || playerLocation.world() == null || !playerLocation.world().equals(packetWorld)) {
             return false;
         }
-        return location.distanceSquared(playerLocation) <= hideOnSpawnDistanceSquared;
+        return location.distanceSquared(playerLocation) <= tileEntityConfig.hideOnSpawnDistanceSquared;
     }
 
     private WrapperPlayServerBlockEntityData buildBlockEntityDataPacket(BlockSpatial location, PacketEventsTileEntityReplayData replayData) {

@@ -106,12 +106,10 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         if (ConfigManager.get().getEntityConfig() != entityConfig) {
             entityConfig = ConfigManager.get().getEntityConfig();
-            hideOnSpawnEntityDistanceSquared = entityConfig.hideOnSpawnDistance() * entityConfig.hideOnSpawnDistance();
         }
 
         if (ConfigManager.get().getPlayerConfig() != playerConfig) {
             playerConfig = ConfigManager.get().getPlayerConfig();
-            hideOnSpawnPlayerDistanceSquared = playerConfig.hideOnSpawnDistance() * playerConfig.hideOnSpawnDistance();
         }
 
         UUID world = COMMON.resolvePacketWorld(playerData, event.getUser());

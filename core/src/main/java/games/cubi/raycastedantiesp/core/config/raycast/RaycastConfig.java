@@ -25,6 +25,7 @@ public class RaycastConfig implements Config {
 
     public final int alwaysShowRadiusSquared;
     public final int raycastRadiusSquared;
+    public final int hideOnSpawnDistanceSquared;
 
     public RaycastConfig(boolean enabled, boolean hideSoundsWhenHidden, int maxOccludingCount, int alwaysShowRadius,
                          int raycastRadius, int hideOnSpawnDistance, int visibleRecheckIntervalTicks) {
@@ -46,6 +47,7 @@ public class RaycastConfig implements Config {
 
         alwaysShowRadiusSquared = alwaysShowRadius * alwaysShowRadius;
         raycastRadiusSquared = raycastRadius * raycastRadius;
+        hideOnSpawnDistanceSquared = hideOnSpawnDistance * hideOnSpawnDistance;
     }
 
     protected static RaycastConfig load(ConfigurationNode node, String path, boolean hasHideSoundsWhenHidden) {

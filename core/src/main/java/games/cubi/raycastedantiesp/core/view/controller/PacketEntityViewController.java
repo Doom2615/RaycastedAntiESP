@@ -50,8 +50,6 @@ public abstract class PacketEntityViewController<P> {
 
     protected EntityConfig entityConfig = null;
     protected PlayerConfig playerConfig = null;
-    protected double hideOnSpawnEntityDistanceSquared = 0;
-    protected double hideOnSpawnPlayerDistanceSquared = 0;
 
     protected void handleWorldStatePacket(UUID player, String world, UUID worldUUID, int minWorldHeight, int currentTick) {
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player);
@@ -123,11 +121,13 @@ public abstract class PacketEntityViewController<P> {
 
         NettyEntity<?> entity = Logger.requireNonNull(processEntitySpawn(playerData, packet, world, currentTick), "processEntitySpawn returned null", 3, PacketEntityViewController.class);
 
-        if ((!isPlayer && entityConfig.enabled()) || isPlayer && playerConfig.enabled()) {
+        RaycastConfig config = (isPlayer) ? playerConfig : entityConfig;
+
+        if (config.enabled()) {
             Locatable ownLocation = playerData.ownLocation();
             boolean staleOwnLocation = ownLocation == null || ownLocation.world() == null || !ownLocation.world().equals(world);
             double distanceSquared = staleOwnLocation ? Double.POSITIVE_INFINITY : ownLocation.distanceSquared(entity);
-            if (distanceSquared > (isPlayer ? hideOnSpawnPlayerDistanceSquared : hideOnSpawnEntityDistanceSquared)) {
+            if (distanceSquared > config.hideOnSpawnDistanceSquared) {
                 entity.setVisible(false);
                 entity.setClientVisible(false);
                 if (isPlayer) {
