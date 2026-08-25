@@ -119,7 +119,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
 
-        if (playerData.entityView().hasPendingTransitions() || playerData.playerView().hasPendingTransitions()) {
+        boolean isInBundle = playerData.nettyData().packetsAreWithinBundle;
+        if (event.getPacketType() == PacketType.Play.Server.BUNDLE) {
+            isInBundle = !isInBundle;
+            playerData.nettyData().packetsAreWithinBundle = isInBundle;
+        }
+
+        if (!isInBundle && (playerData.entityView().hasPendingTransitions() || playerData.playerView().hasPendingTransitions())) {
             PlayerData transitionData = playerData;
             User viewer = event.getUser();
             event.getTasksAfterSend().add(() -> processPendingEntityTransitions(transitionData, viewer));
