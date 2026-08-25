@@ -98,6 +98,8 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
         PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
+        // PaperPacketEventsEntityViewController must be constructed before PaperPacketEventsBlockViewController
+        // as the entity controller must run before the block controller
         new PaperPacketEventsBlockViewController(blockInfoResolver, trackAllBlocks, currentTickSupplier);
 
         engine = new PaperAsyncEngine(this, config, currentTickSupplier);

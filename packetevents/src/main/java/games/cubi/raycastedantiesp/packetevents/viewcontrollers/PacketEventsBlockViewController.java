@@ -91,8 +91,10 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
 
         handleBlockPackets(event, event.getUser(), playerData, world, tileChecksEnabled);
 
-        if (blockView.hasPendingTransitions()) {
-            processTileEntityTransitions(event.getUser(), playerData);
+        // The entity controller is guaranteed to have run first, so it is safe to assume this var is accurate.
+        if (blockView.hasPendingTransitions() && !playerData.nettyData().packetsAreWithinBundle) {
+            User viewer = event.getUser();
+            event.getTasksAfterSend().add(() -> processTileEntityTransitions(viewer, playerData));
         }
     }
 
