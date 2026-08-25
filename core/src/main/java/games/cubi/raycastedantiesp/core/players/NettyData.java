@@ -28,6 +28,9 @@ import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.
  */
 public class NettyData implements Clearable {
+    //
+    public boolean packetsAreWithinBundle = false;
+    //
     private static final int DEFAULT_MAP_SIZE = 16;
     //
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------

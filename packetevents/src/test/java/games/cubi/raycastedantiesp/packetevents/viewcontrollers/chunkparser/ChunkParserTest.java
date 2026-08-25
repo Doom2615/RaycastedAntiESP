@@ -84,6 +84,7 @@ class ChunkParserTest {
         var tracked = view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
         assertNotNull(tracked);
         assertTrue(tracked.visible());
+        assertTrue(tracked.clientVisible());
         assertNotNull(tracked.extraData());
     }
 
@@ -102,7 +103,9 @@ class ChunkParserTest {
         assertNotNull(replacement);
         assertEquals(1, section.getBlockId(3, 2, 1));
         assertEquals(0, replacement.getTileEntities().length);
-        assertFalse(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
+        var tracked = view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
+        assertFalse(tracked.visible());
+        assertFalse(tracked.clientVisible());
     }
 
     @Test
@@ -149,6 +152,8 @@ class ChunkParserTest {
         TileEntity tile = new TileEntity((byte) (3 << 4 | 1), (short) 2, 0, null);
         Column initialColumn = new Column(0, 0, true, new BaseChunk[]{initial}, new TileEntity[]{tile});
         new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, initialColumn, 0);
+        TrackedTileEntity<?> tracked = view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
+        tracked.setClientVisible(false);
 
         view.applyTileEntityCheckMode(true, 1, unused -> {});
         Chunk_v1_18 resend = airSection();
@@ -158,7 +163,8 @@ class ChunkParserTest {
 
         assertNull(replacement);
         assertEquals(99, resend.getBlockId(3, 2, 1));
-        assertTrue(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
+        assertTrue(tracked.visible());
+        assertTrue(tracked.clientVisible());
     }
 
     @Test
@@ -206,6 +212,7 @@ class ChunkParserTest {
         assertSame(section, column.getChunks()[0]);
         assertSame(tileEntities, column.getTileEntities());
         assertTrue(tracked.visible());
+        assertTrue(tracked.clientVisible());
         assertEquals(TrackedTileEntity.NEVER_CHECKED, tracked.lastChecked());
         assertEquals(99, section.getBlockId(3, 2, 1));
         assertNull(view.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(4, 2, 1)));
@@ -223,7 +230,9 @@ class ChunkParserTest {
                 nonMutatingView, world, new Column(0, 0, true, new BaseChunk[]{nonMutatingSection}, new TileEntity[]{tile}), 0
         );
         assertNull(nonMutatingReplacement);
-        assertTrue(nonMutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
+        var nonMutatingTracked = nonMutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
+        assertTrue(nonMutatingTracked.visible());
+        assertTrue(nonMutatingTracked.clientVisible());
 
         Chunk_v1_18 mutatingSection = airSection();
         mutatingSection.set(3, 2, 1, 99);
@@ -234,7 +243,9 @@ class ChunkParserTest {
         );
         assertNotNull(mutatingReplacement);
         assertEquals(1, mutatingSection.getBlockId(3, 2, 1));
-        assertFalse(mutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1)).visible());
+        var mutatingTracked = mutatingView.getTrackedTileEntity(world, new ImmutableBlockSpatialImpl(3, 2, 1));
+        assertFalse(mutatingTracked.visible());
+        assertFalse(mutatingTracked.clientVisible());
     }
 
     @Test

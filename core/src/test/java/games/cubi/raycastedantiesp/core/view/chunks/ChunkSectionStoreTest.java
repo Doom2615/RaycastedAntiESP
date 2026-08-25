@@ -294,7 +294,30 @@ class ChunkSectionStoreTest {
         assertEquals(1, visibilityRepairs.size());
         assertSame(tileEntity, visibilityRepairs.getFirst());
         assertTrue(tileEntity.visible());
+        assertFalse(tileEntity.clientVisible());
         assertFalse(view.hasPendingTransitions());
+    }
+
+    @Test
+    void disablingTileChecksRepairsClientHiddenEngineVisibleTiles() {
+        TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
+        UUID world = UUID.randomUUID();
+        ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(1, 64, 2);
+        ArrayList<TrackedTileEntity<?>> visibilityRepairs = new ArrayList<>();
+
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
+        TestTileEntity tileEntity = view.updateOrInsertTileEntity(world, position, 99, true);
+        tileEntity.setClientVisible(false);
+
+        view.applyTileEntityCheckMode(false, 1, tile -> {
+            visibilityRepairs.add(tile);
+            tile.setClientVisible(true);
+        });
+
+        assertEquals(1, visibilityRepairs.size());
+        assertSame(tileEntity, visibilityRepairs.getFirst());
+        assertTrue(tileEntity.visible());
+        assertTrue(tileEntity.clientVisible());
     }
 
     @Test
