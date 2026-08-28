@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class UpdateChecker {
     private static final String VERSION_API_ENDPOINT = "https://api.modrinth.com/v2/project/bCjNZu0C/version?include_changelog=false";
     private static final String PLATFORM_NAME = "Paper";
-    private static final String MODRINTH_PAGE_URL = "https://modrinth.com/project/bCjNZu0C";
+    private static final String MODRINTH_PAGE_URL = "https://modrinth.com/project/bCjNZu0C/";
 
     enum UpdateChannel {
         STABLE("release", "release"),
