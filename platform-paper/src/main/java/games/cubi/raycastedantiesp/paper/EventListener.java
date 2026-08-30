@@ -19,7 +19,6 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -64,7 +63,7 @@ public class EventListener extends PaperListener {
 
         if (player.hasMetadata("NPC")) return;
 
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+        PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
         if (playerData == null) {
             Logger.error("Player joined before packet state was registered. Kicking player=" + player.getName() + " uuid=" + player.getUniqueId(), 1, EventListener.class);
             player.kick(MiniMessage.miniMessage().deserialize("RaycastedAntiESP failed to initialise your packet state. Please reconnect. Report this issue to the server you are playing on if you are still unable to join."));
@@ -84,7 +83,7 @@ public class EventListener extends PaperListener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(event.getPlayer().getUniqueId());
+        PlayerData playerData = PlayerRegistry.get().getPlayerData(event.getPlayer().getUniqueId());
         if (playerData == null) return;
         updateOwnLocation(playerData, event.getPlayer().getEyeLocation());
     }
@@ -121,7 +120,7 @@ public class EventListener extends PaperListener {
     }
 
     private void updateOwnLocation(Player player, Location location) {
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+        PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
         if (playerData == null || location == null) {
             return;
         }

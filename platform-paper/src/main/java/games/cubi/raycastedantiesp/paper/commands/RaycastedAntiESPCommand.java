@@ -146,7 +146,7 @@ public class RaycastedAntiESPCommand {
             assert Attribution.class == Attribution.class;
             assert Attribution.READ_COMMENTS_BEFORE_EDITING_OR_DELETING_CLASS_OR_FACE_LEGAL_ACTION == 0; //Using constant from Attribution class to ensure that it cannot be deleted without the developer noticing that they are obligated to replace it with an equivalent notice.
             Player player = (Player) sender;
-            PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+            PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
             Entity closestEntity = player.getNearbyEntities(10,10,10).getFirst();
             if (closestEntity == null) return;
             player.sendRichMessage("Closest entity is "+closestEntity.getName());
@@ -182,7 +182,7 @@ public class RaycastedAntiESPCommand {
             @DefaultExecutes
             void benchmark(Player player, @IntArg(min = 1, max = Short.MAX_VALUE - 1) int raycastDistance) {
                 Locatable[] locatables = new Locatable[BENCHMARK_CORPUS_SIZE];
-                PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+                PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
                 Locatable currentPlayerLocation = playerData.ownLocation();
                 Locatable playerLocatable = new MutableLocatableImpl(currentPlayerLocation.world(), currentPlayerLocation.x(), currentPlayerLocation.y(), currentPlayerLocation.z());
                 MutableFloatingSpatial unitDirection = new MutableSpatialImpl(0, 0, 0);
@@ -306,14 +306,14 @@ public class RaycastedAntiESPCommand {
 
         @Executes("loaded-chunks")
         void loadedChunksCommand(Player player) {
-            PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+            PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
             AbstractBlockView<?, ?> pbsm = (AbstractBlockView<?, ?>) playerData.blockView();
             player.sendMessage(pbsm.loadedChunkCount() +"chunks loaded");
         }
 
         @Executes("entity-id")
         void getFromEntityID(int entityID, Player player) {
-            PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
+            PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
             if (playerData == null) {
                 player.sendRichMessage("<red>No player data is registered for " + describeViewer(player.getUniqueId()) + ".");
                 return;
@@ -337,7 +337,7 @@ public class RaycastedAntiESPCommand {
         void getFromEntityID(int entityID, CommandSender sender) {
             sender.sendRichMessage("<white>Searching all connected player views for entity ID " + entityID + ":");
             int matches = 0;
-            for (PlayerData playerData : PlayerRegistry.getInstance().getAllPlayerData()) {
+            for (PlayerData playerData : PlayerRegistry.get().getAllPlayerData()) {
                 if (!playerData.isConnected()) {
                     continue;
                 }
@@ -356,7 +356,7 @@ public class RaycastedAntiESPCommand {
         }
         void getFromUUID(UUID entityUUID, CommandSender sender) {
             int matches = 0;
-            for (PlayerData playerData : PlayerRegistry.getInstance().getAllPlayerData()) {
+            for (PlayerData playerData : PlayerRegistry.get().getAllPlayerData()) {
                 if (!playerData.isConnected()) {
                     continue;
                 }

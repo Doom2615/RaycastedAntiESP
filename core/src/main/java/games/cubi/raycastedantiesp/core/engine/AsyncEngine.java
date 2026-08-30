@@ -8,7 +8,6 @@
 
 package games.cubi.raycastedantiesp.core.engine;
 
-import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
@@ -172,7 +171,7 @@ public abstract class AsyncEngine implements Engine {
             final int currentTick = startTick;
             runningTick.set(currentTick);
             claimedRunningTick = true;
-            Collection<PlayerData> allPlayers = PlayerRegistry.getInstance().getAllPlayerData();
+            Collection<PlayerData> allPlayers = PlayerRegistry.get().getAllPlayerData();
 
             EntityConfig entityConfig = config.getEntityConfig();
             PlayerConfig playerConfig = config.getPlayerConfig();

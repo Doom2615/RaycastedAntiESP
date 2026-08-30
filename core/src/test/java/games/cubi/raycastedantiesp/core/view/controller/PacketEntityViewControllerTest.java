@@ -48,7 +48,7 @@ class PacketEntityViewControllerTest {
     @AfterEach
     void unregisterPlayers() {
         for (UUID player : registeredPlayers) {
-            PlayerRegistry.getInstance().unregisterPlayer(player);
+            PlayerRegistry.get().unregisterPlayer(player);
         }
         registeredPlayers.clear();
     }
@@ -59,7 +59,7 @@ class PacketEntityViewControllerTest {
         CONTROLLER.replacementPassengerPackets.clear();
         UUID playerUUID = UUID.randomUUID();
         registeredPlayers.add(playerUUID);
-        PlayerData playerData = PlayerRegistry.getInstance().registerAndGetPlayer(
+        PlayerData playerData = PlayerRegistry.get().registerAndGetPlayer(
                 playerUUID,
                 0,
                 1,

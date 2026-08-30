@@ -90,7 +90,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             return;
         }
 
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
+        PlayerData playerData = PlayerRegistry.get().getPlayerData(viewerUUID);
 
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);

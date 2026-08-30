@@ -77,7 +77,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             tileEntityConfig = ConfigManager.get().getTileEntityConfig();
         }
 
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
+        PlayerData playerData = PlayerRegistry.get().getPlayerData(viewerUUID);
         if (playerData == null) {
             return;
         }

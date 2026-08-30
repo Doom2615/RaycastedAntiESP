@@ -25,7 +25,7 @@ public class PlayerRegistry {
 
     private PlayerRegistry() {}
 
-    public static PlayerRegistry getInstance() {
+    public static PlayerRegistry get() {
         return instance;
     }
 
