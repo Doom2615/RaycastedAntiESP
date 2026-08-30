@@ -171,13 +171,13 @@ public abstract class AsyncEngine implements Engine {
             final int currentTick = startTick;
             runningTick.set(currentTick);
             claimedRunningTick = true;
-            Collection<PlayerData> allPlayers = PlayerRegistry.get().getAllPlayerData();
+            PlayerData[] allPlayers = PlayerRegistry.get().getPlayerDataArray();
 
             EntityConfig entityConfig = config.getEntityConfig();
             PlayerConfig playerConfig = config.getPlayerConfig();
             TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
             if (recordTimings) {
-                timings = new TickTimings(scheduledTick, scheduledNanos, currentTick, startNanos, threads, allPlayers.size());
+                timings = new TickTimings(scheduledTick, scheduledNanos, currentTick, startNanos, threads, allPlayers.length);
             }
             /*
             Logger.debug("Tick #" + currentTick);
@@ -193,24 +193,30 @@ public abstract class AsyncEngine implements Engine {
             // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
             if (threads == 1) {
                 handedOffToSubTick = true;
-                subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, timings, tickTimingStats);
+                subTick(allPlayers, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, timings, tickTimingStats);
                 return true;
             }
 
-            List<List<PlayerData>> batches = new ArrayList<>(threads);
+            List<PlayerData[]> batches = new ArrayList<>(threads);
+            int playerCount = allPlayers.length;
             for (int i = 0; i < threads; i++) {
-                batches.add(new ArrayList<>());
+                int batchSize = (playerCount + threads - 1 - i) / threads;
+                batches.add(new PlayerData[batchSize]);
             }
 
             int index = 0;
             for (PlayerData playerData : allPlayers) {
-                batches.get(index++ % threads).add(playerData);
+                int batchIndex = index % threads;
+                int position = index / threads;
+
+                batches.get(batchIndex)[position] = playerData;
+                index++;
             }
 
             TickTimings tickTimings = timings; // needs to be effectively-final for lambda
             int scheduledBatches = 0;
             try {
-                for (List<PlayerData> batch : batches) {
+                for (PlayerData[] batch : batches) {
                     asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick, tickTimings, tickTimingStats));
                     scheduledBatches++;
                 }
@@ -243,7 +249,7 @@ public abstract class AsyncEngine implements Engine {
      * @param timingStats the timing sink selected when this tick started, so config changes during
      * worker execution do not split one tick across sinks.
      */
-    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick, TickTimings timings, TimingStats timingStats) {
+    private void subTick(PlayerData[] batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick, TickTimings timings, TimingStats timingStats) {
         TickTimingBatch batchTimings = timings == null ? TickTimingBatchNoOp.INSTANCE : new TickTimingBatch();
         long batchStartNanos = batchTimings.startBatch();
         try {
@@ -328,7 +334,7 @@ public abstract class AsyncEngine implements Engine {
         }
     }
 
-    private void processTickForPlayers(List<PlayerData> playerDataList, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig,
+    private void processTickForPlayers(PlayerData[] playerDataList, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig,
                                        boolean debugParticles, int currentTick, TickTimingBatch timings) {
 
         for (PlayerData playerData : playerDataList) {

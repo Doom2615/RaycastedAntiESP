@@ -103,7 +103,7 @@ public class MetricsCollector {
     }
 
     private String getPlayerCount() {
-        return bucketPlayerCount(PlayerRegistry.get().getAllPlayerData().size());
+        return bucketPlayerCount(PlayerRegistry.get().getPlayerCount());
     }
 
     private String getMedianEntityCount() {

@@ -337,7 +337,7 @@ public class RaycastedAntiESPCommand {
         void getFromEntityID(int entityID, CommandSender sender) {
             sender.sendRichMessage("<white>Searching all connected player views for entity ID " + entityID + ":");
             int matches = 0;
-            for (PlayerData playerData : PlayerRegistry.get().getAllPlayerData()) {
+            for (PlayerData playerData : PlayerRegistry.get().getPlayerDataArray()) {
                 if (!playerData.isConnected()) {
                     continue;
                 }
@@ -356,7 +356,7 @@ public class RaycastedAntiESPCommand {
         }
         void getFromUUID(UUID entityUUID, CommandSender sender) {
             int matches = 0;
-            for (PlayerData playerData : PlayerRegistry.get().getAllPlayerData()) {
+            for (PlayerData playerData : PlayerRegistry.get().getPlayerDataArray()) {
                 if (!playerData.isConnected()) {
                     continue;
                 }
